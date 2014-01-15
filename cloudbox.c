@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <>dirent.h>
+#include <dirent.h>
 #include "cloudbox.h"
 
 /*
@@ -30,6 +30,8 @@ pthread_mutex_t file_list_mutex;
 
 
 int main(int argc, char **argv){
+
+	printf("Malakies!!\n");
 	int opt;
 	int scan_interval;
 	int broadcast_port;
