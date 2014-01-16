@@ -22,8 +22,6 @@
 struct dir_files_status_list *watched_files;
 
 
-
-
 /*
  * Print mutex, for printing nicely the messages from different threads
  */
