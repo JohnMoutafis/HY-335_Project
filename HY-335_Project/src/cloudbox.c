@@ -196,7 +196,6 @@ void udp_server(){
 }
 int main(int argc, char **argv){
 
-	printf("Edited by rafas");
 	int opt;
 	int scan_interval;
 	int broadcast_port;
