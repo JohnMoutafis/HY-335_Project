@@ -21,6 +21,9 @@
  */
 struct dir_files_status_list *watched_files;
 
+
+
+
 /*
  * Print mutex, for printing nicely the messages from different threads
  */
@@ -32,6 +35,84 @@ pthread_mutex_t print_mutex;
  * of the file list of the watched directory
  */
 pthread_mutex_t file_list_mutex;
+
+
+
+/*insert from list*/
+struct dir_files_status_list* insert_file(struct dir_files_status_list *head,char *filename ,size_t size_in_bytes ,char sha1sum[SHA1_BYTES_LEN],
+                                        long long int modifictation_time_from_epoch){
+
+        struct dir_files_status_list *cur ,*newnode,*prev;
+        prev=NULL;
+        cur=head;
+        while((cur)&&(strcmp(filename,cur->filename)>0)){
+                prev=cur;
+                cur=cur->next;
+        }
+        if((cur)&&(strcmp(cur->filename,filename)==0))
+                return head;
+
+        newnode=(struct dir_files_status_list*)malloc(sizeof(struct dir_files_status_list));
+        newnode->filename=(char*)malloc(sizeof(char*));
+        strcpy(newnode->filename,filename);
+        strcpy(newnode->sha1sum,sha1sum);
+        newnode->size_in_bytes=size_in_bytes;
+        newnode->modifictation_time_from_epoch=modifictation_time_from_epoch;
+        newnode->next=cur;
+        newnode->previous=prev;
+        if((!cur)&&(!prev)){
+                head=newnode;
+                return head;
+        }
+        if(!cur){
+                prev->next=newnode;
+                return head;
+        }
+        if(!prev)
+               head=newnode;
+        else{
+               prev->next=newnode;
+               cur->previous=newnode;
+        }
+        return head;
+}
+
+/*delete from list*/
+struct dir_files_status_list* delete_file(struct dir_files_status_list *head,char *filename){
+			struct dir_files_status_list *cur,*prev,*next;
+			cur=head;
+	        prev=NULL;
+	        while((cur)&&(strcmp(cur->filename,filename)!=0)){
+	                prev=cur;
+	                cur=cur->next;
+	        }
+	        if(!cur)
+	                return head;
+	        if(!prev){
+
+	                prev=cur;
+	                cur=cur->next;
+	                if(cur)
+	                	cur->previous=NULL;
+	                free(prev->filename);
+	                free(prev);
+	                return cur;
+	        }
+	        if(!cur->next){
+	                prev->next=NULL;
+	                free(cur->filename);
+	                free(cur);
+	                return head;
+	        }
+	        prev->next=cur->next;
+	        next=cur->next;
+	        next->previous=prev;
+	        free(cur->filename);
+	        free(cur);
+	        return head;
+}
+
+
 
 /**Function of TCP Client*/
 void tcp_client(){
@@ -268,75 +349,4 @@ int main(int argc, char **argv){
     udp_client();
     tcp_client();
 	return 0;
-}
-struct dir_files_status_list* insert_file(struct dir_files_status_list *head,char *filename ,size_t size_in_bytes ,char sha1sum[SHA1_BYTES_LEN],
-                                        long long int modifictation_time_from_epoch){
-
-        struct dir_files_status_list *cur ,*newnode,*prev;
-        prev=NULL;
-        cur=head;
-        while((cur)&&(strcmp(filename,cur->filename)>0)){
-                prev=cur;
-                cur=cur->next;
-        }
-        if((cur)&&(strcmp(cur->filename,filename)==0))
-                return head;
-
-        newnode=(struct dir_files_status_list*)malloc(sizeof(struct dir_files_status_list));
-        newnode->filename=(char*)malloc(sizeof(char*));
-        strcpy(newnode->filename,filename);
-        strcpy(newnode->sha1sum,sha1sum);
-        newnode->size_in_bytes=size_in_bytes;
-        newnode->modifictation_time_from_epoch=modifictation_time_from_epoch;
-        newnode->next=cur;
-        newnode->previous=prev;
-        if((!cur)&&(!prev)){
-                head=newnode;
-                return head;
-        }
-        if(!cur){
-                prev->next=newnode;
-                return head;
-        }
-        if(!prev)
-               head=newnode;
-        else{
-               prev->next=newnode;
-               cur->previous=newnode;
-        }
-        return head;
-}
-
-struct dir_files_status_list* delete_file(struct dir_files_status_list *head,char *filename){
-			struct dir_files_status_list *cur,*prev,*next;
-			cur=head;
-	        prev=NULL;
-	        while((cur)&&(strcmp(cur->filename,filename)!=0)){
-	                prev=cur;
-	                cur=cur->next;
-	        }
-	        if(!cur)
-	                return head;
-	        if(!prev){
-
-	                prev=cur;
-	                cur=cur->next;
-	                if(cur)
-	                	cur->previous=NULL;
-	                free(prev->filename);
-	                free(prev);
-	                return cur;
-	        }
-	        if(!cur->next){
-	                prev->next=NULL;
-	                free(cur->filename);
-	                free(cur);
-	                return head;
-	        }
-	        prev->next=cur->next;
-	        next=cur->next;
-	        next->previous=prev;
-	        free(cur->filename);
-	        free(cur);
-	        return head;
 }
