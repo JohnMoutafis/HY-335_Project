@@ -336,7 +336,7 @@ int main(int argc, char **argv){
 	}
         files=readdir( dir);
         while(files){
-                watched_files=insert_file(watched_files,files->d_name,files->d_reclen,"sha",0);
+                watched_files=insert_file(watched_files,files->d_name,14,"sha",0);
                 files=readdir(dir);
         }
         while(watched_files){/*prints watched_files list*/
