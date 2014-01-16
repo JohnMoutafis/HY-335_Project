@@ -327,6 +327,14 @@ int main(int argc, char **argv){
 		   "Scan interval: %d seconds\n"
 		   "Broadcast port: %d\n",
 		client_name, watched_dir, scan_interval, broadcast_port);
+
+	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
+	/*unsigned char test = Default_Message_Creator(NO_CHANGES_MSG,client_name,broadcast_port,"1548784512");
+	printf("%s\n",test);*/
+	unsigned char test[2] = {0x1};
+	printf("%d",test[0]);
+	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
+
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/
 	if(!dir){
 		printf("\nThe directory path does not exist ");

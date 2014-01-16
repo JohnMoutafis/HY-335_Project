@@ -29,7 +29,7 @@
  * See the Makefile for details
  */
 #include <openssl/sha.h>
-
+#include <string.h>
 /**
  * An easy way to support boolean type in C
  */
@@ -165,6 +165,32 @@ void *handle_incoming_tcp_connection_thread(void *params);
  * can fire up a new thread or do a specific job.
  */
 void *udp_receiver_dispatcher_thread(void *params);
+
+/*
+ * =========================================================
+ * 				CUSTOM FUNCTIONS TEAM:
+ * =========================================================
+ */
+
+/**
+ * Creates a message with all the default informations.
+ */
+unsigned char* Default_Message_Creator(msg_type_t msg_type,char *client_name, char *TCP_listening_port, char *curr_timestamp)
+{
+	unsigned char non_printable = 0x0;
+	unsigned char msg_byte[2] = {msg_type};
+	unsigned char client_byte[sizeof(client_name)+2];
+	unsigned char TCP_byte[2] = {TCP_listening_port};
+	unsigned char curr_byte[8] = {curr_timestamp};
+	unsigned char default_msg[12 + sizeof(client_byte)];
+
+	/*
+	 * den leitourgei
+	unsigned char tmp[sizeof(client_name)+1] = strcat(non_printable,client_name);
+	client_byte = strcat(tmp,non_printable);
+	*/
+	return client_byte;
+}
 
 
 /*
