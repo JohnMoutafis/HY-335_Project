@@ -110,7 +110,31 @@ struct dir_files_status_list* delete_file(struct dir_files_status_list *head,cha
 	        return head;
 }
 
+/*
+ * Message functions
+ * Moutafis
+ */
+default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts)
+{
+	default_msg ret;
+	ret.msg_type = msg;
+	ret.TCP_listening_port = TCP_lp;
+	ret.current_time_stamp = curr_ts;
 
+	int size_of_cname = strlen(client_name) + 2, i;
+	char tmp[size_of_cname];
+	tmp[0] = 0x0;
+	for(i=1; i<=size_of_cname-2; i++)
+	{
+		tmp[i] = client_name[i - 1];
+	}
+	tmp[size_of_cname-1] = 0x0;
+
+	ret.client_name = tmp;
+	return ret;
+}
+
+/*END OF MESSAGE FUNCTIONS*/
 
 /**Function of TCP Client*/
 void tcp_client(){
