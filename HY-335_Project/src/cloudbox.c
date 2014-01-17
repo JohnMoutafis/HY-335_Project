@@ -337,6 +337,7 @@ int main(int argc, char **argv){
 	int scan_interval;
 	int broadcast_port;
 	int fsize=15;
+	/*added now*/char p[100];
 	char *client_name;
 	char *watched_dir;
 	DIR *dir;
@@ -395,6 +396,7 @@ int main(int argc, char **argv){
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/
+	/*added now*/strcat(watched_dir,"/");
 	if(!dir){
 		printf("\nThe directory path does not exist ");
 		exit(-1);
@@ -403,12 +405,21 @@ int main(int argc, char **argv){
         while(files){
                 /*Edit by Rafas*/
 		
-		//fsize=filesize(files->d_name);
 		
-		//printf("File (%s) size: %d bytes\n",files->d_name, fsize);
+		strcpy(p,watched_dir);
+		
+		
+		strcat(p,files->d_name);
+  
+		fsize=filesize(p);
+		
+		printf("File (%s) size: %d bytes\n",files->d_name, fsize);
 		
                 watched_files=insert_file(watched_files,files->d_name,fsize,"sha",0);
                 files=readdir(dir);
+                
+                
+                
 		/*End of Changes*/
         }
         while(watched_files){/*prints watched_files list*/
