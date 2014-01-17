@@ -137,7 +137,7 @@ default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_l
 full_msg full_message_creator(default_msg def_msg, int file_mts, char* file_name, int file_lngh)
 {
 	full_msg ret;
-	ret.def_msg = def_msg;
+	//ret.def_msg = def_msg;
 	ret.file_mod_time_stamp = file_mts;
 	ret.file_length = file_lngh;
 
@@ -391,8 +391,9 @@ int main(int argc, char **argv){
 	/*unsigned char test = Default_Message_Creator(NO_CHANGES_MSG,client_name,broadcast_port,"1548784512");
 	printf("%s\n",test);*/
 	default_msg test = default_message_creator(NO_CHANGES_MSG, client_name, broadcast_port, 1548784512);
-	//full_msg full_test = full_message_creator(test, 1550784512, watched_dir,454545445);
-	printf("%s",sizeof(test));
+	full_msg full_test = full_message_creator(test, 1550784512, watched_dir,454545445);
+	long double test_int;
+	printf("%d",sizeof(test_int));
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/

@@ -29,7 +29,6 @@
  * See the Makefile for details
  */
 #include <openssl/sha.h>
-#include <string.h>
 /**
  * An easy way to support boolean type in C
  */
@@ -186,7 +185,7 @@ typedef struct default_msg{
  * General form of every possible message.
  */
 typedef struct full_msg{
-	default_msg def_msg;
+	//default_msg def_msg;
 	long int file_mod_time_stamp;
 	char* file_name;
 
