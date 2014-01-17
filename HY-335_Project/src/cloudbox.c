@@ -237,7 +237,7 @@ void udp_server(){
   int sock;
   int accepted;
   int received;
-  
+  int fsize;
   struct sockaddr_in sin;
 
   struct sockaddr client_addr;
