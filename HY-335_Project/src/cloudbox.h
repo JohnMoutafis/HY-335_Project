@@ -182,7 +182,23 @@ typedef struct default_msg{
 	long int current_time_stamp;
 }default_msg;
 
+/*
+ * General form of every possible message.
+ */
+typedef struct full_msg{
+	default_msg def_msg;
+	long int file_mod_time_stamp;
+	char* file_name;
+
+	long int file_length;
+}full_msg;
+
+/*
+ * Creates a default message with the given params.
+ */
 default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts);
+
+full_msg full_message_creator(default_msg def_msg, int file_mts, char* file_name, int file_lngh);
 
 /*END OF CUSTOM FUNCTIONS & STRUCTS*/
 
