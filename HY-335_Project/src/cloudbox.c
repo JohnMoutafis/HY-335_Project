@@ -237,7 +237,6 @@ void udp_server(){
   int sock;
   int accepted;
   int received;
-  int fsize;
   struct sockaddr_in sin;
 
   struct sockaddr client_addr;
@@ -293,7 +292,7 @@ int main(int argc, char **argv){
 	int opt;
 	int scan_interval;
 	int broadcast_port;
-	
+	int fsize;
 	char *client_name;
 	char *watched_dir;
 	DIR *dir;
