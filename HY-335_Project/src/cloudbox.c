@@ -273,6 +273,21 @@ void udp_server(){
     sleep(5);
   }
 }
+
+/*Edit by Rafas*/
+/**Function to find filesize portable*/
+long filesize(const char *filename)
+{
+FILE *f = fopen(filename,"rb");  /* open the file in read only */
+
+long size = 0;
+  if (fseek(f,0,SEEK_END)==0) /* seek was successful */
+      size = ftell(f);
+  fclose(f);
+  return size;
+}
+/*End of Changes*/
+
 int main(int argc, char **argv){
 
 	int opt;
@@ -342,8 +357,15 @@ int main(int argc, char **argv){
 	}
         files=readdir( dir);
         while(files){
-                watched_files=insert_file(watched_files,files->d_name,14,"sha",0);
+                /*Edit by Rafas*/
+		
+		fsize=filesize(files->d_name);
+		
+		printf("File (%s) size: %d bytes\n",files->d_name, fsize);
+		
+                watched_files=insert_file(watched_files,files->d_name,fsize,"sha",0);
                 files=readdir(dir);
+		/*End of Changes*/
         }
         while(watched_files){/*prints watched_files list*/
                 printf("\n%s",watched_files->filename);
