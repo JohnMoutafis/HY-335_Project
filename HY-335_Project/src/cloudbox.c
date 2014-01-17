@@ -331,8 +331,8 @@ int main(int argc, char **argv){
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 	/*unsigned char test = Default_Message_Creator(NO_CHANGES_MSG,client_name,broadcast_port,"1548784512");
 	printf("%s\n",test);*/
-	unsigned char test[2] = {0x1};
-	printf("%d",test[0]);
+	default_msg test = default_message_creator(STATUS_MSG,client_name,broadcast_port, 1548784512);
+	printf("%s",test.client_name);
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/

@@ -85,7 +85,7 @@ typedef struct dir_files_status_list {
   
 	struct dir_files_status_list *previous;
 	struct dir_files_status_list *next;
-};
+}dir_files_status_list;
 
 /*
  * The list that holds all the current watched files.
@@ -168,28 +168,38 @@ void *udp_receiver_dispatcher_thread(void *params);
 
 /*
  * =========================================================
- * 				CUSTOM FUNCTIONS TEAM:
+ * 				CUSTOM FUNCTIONS & STRUCTS TEAM:
  * =========================================================
  */
 
-/**
- * Creates a message with all the default informations.
+/*
+ * General form of the default message.
  */
-unsigned char* Default_Message_Creator(msg_type_t msg_type,char *client_name, char *TCP_listening_port, char *curr_timestamp)
-{
-	unsigned char non_printable = 0x0;
-	unsigned char msg_byte[2] = {msg_type};
-	unsigned char client_byte[sizeof(client_name)+2];
-	unsigned char TCP_byte[2] = {TCP_listening_port};
-	unsigned char curr_byte[8] = {curr_timestamp};
-	unsigned char default_msg[12 + sizeof(client_byte)];
+typedef struct default_msg{
+	short int msg_type;
+	char *client_name;
+	short int TCP_listening_port;
+	long int current_time_stamp;
+}default_msg;
 
-	/*
-	 * den leitourgei
-	unsigned char tmp[sizeof(client_name)+1] = strcat(non_printable,client_name);
-	client_byte = strcat(tmp,non_printable);
-	*/
-	return client_byte;
+default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts)
+{
+	default_msg ret;
+	ret.msg_type = msg;
+	ret.TCP_listening_port = TCP_lp;
+	ret.current_time_stamp = curr_ts;
+
+	int size_of_cname = strlen(client_name) + 2, i;
+	char tmp[size_of_cname];
+	tmp[0] = 0x0;
+	for(i=1; i<=size_of_cname-2; i++)
+	{
+		tmp[i] = client_name[i - 1];
+	}
+	tmp[size_of_cname-1] = 0x0;
+
+	ret.client_name = tmp;
+	return ret;
 }
 
 
