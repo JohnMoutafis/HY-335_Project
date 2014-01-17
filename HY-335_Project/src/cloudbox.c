@@ -292,7 +292,7 @@ int main(int argc, char **argv){
 	int opt;
 	int scan_interval;
 	int broadcast_port;
-	int fsize;
+	int fsize=15;
 	char *client_name;
 	char *watched_dir;
 	DIR *dir;
@@ -358,9 +358,9 @@ int main(int argc, char **argv){
         while(files){
                 /*Edit by Rafas*/
 		
-		fsize=filesize(files->d_name);
+		//fsize=filesize(files->d_name);
 		
-		printf("File (%s) size: %d bytes\n",files->d_name, fsize);
+		//printf("File (%s) size: %d bytes\n",files->d_name, fsize);
 		
                 watched_files=insert_file(watched_files,files->d_name,fsize,"sha",0);
                 files=readdir(dir);
