@@ -114,43 +114,34 @@ struct dir_files_status_list* delete_file(struct dir_files_status_list *head,cha
  * Message functions
  * Moutafis
  */
-default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts)
+full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name, int file_lngh)
 {
-	default_msg ret;
+	full_msg ret;
 	ret.msg_type = msg;
 	ret.TCP_listening_port = TCP_lp;
 	ret.current_time_stamp = curr_ts;
-
-	int size_of_cname = strlen(client_name) + 2, i;
-	char tmp[size_of_cname];
-	tmp[0] = 0x0;
-	for(i=1; i<=size_of_cname-2; i++)
-	{
-		tmp[i] = client_name[i-1];
-	}
-	tmp[size_of_cname-1] = 0x0;
-
-	ret.client_name = tmp;
-	return ret;
-}
-
-full_msg full_message_creator(default_msg def_msg, int file_mts, char* file_name, int file_lngh)
-{
-	full_msg ret;
-	//ret.def_msg = def_msg;
 	ret.file_mod_time_stamp = file_mts;
 	ret.file_length = file_lngh;
 
+	int size_of_cname = strlen(client_name) + 1;
 	int size_of_fname = strlen(file_name) + 1, i;
-	char tmp[size_of_fname];
-	tmp[0] = 0x0;
+	char tmp_cname[size_of_cname],tmp_fname[size_of_fname];
+	tmp_cname[0] = 0x0;
+	tmp_fname[0] = 0x0;
+
+	for(i=1; i<=strlen(client_name); i++)
+	{
+		tmp_cname[i] = client_name[i-1];
+	}
 	for(i=1; i<=size_of_fname; i++)
 	{
-		tmp[i] = file_name[i-1];
+		tmp_fname[i] = file_name[i-1];
 	}
-	tmp[size_of_fname-1] = 0x0;
+	tmp_cname[size_of_cname] = 0x0;
+	tmp_fname[size_of_fname] = 0x0;
 
-	ret.file_name = tmp;
+	ret.client_name = tmp_cname;
+	ret.file_name = tmp_fname;
 	return ret;
 }
 
@@ -437,10 +428,8 @@ int main(int argc, char **argv){
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 	/*unsigned char test = Default_Message_Creator(NO_CHANGES_MSG,client_name,broadcast_port,"1548784512");
 	printf("%s\n",test);*/
-	default_msg test = default_message_creator(NO_CHANGES_MSG, client_name, broadcast_port, 1548784512);
-	full_msg full_test = full_message_creator(test, 1550784512, watched_dir,454545445);
-	long long int test_int;
-	printf("%d\n",sizeof(test_int));
+	full_msg full_test = full_message_creator(NO_CHANGES_MSG, client_name, broadcast_port, 1548784512, 1550784512, watched_dir,454545445);
+	printf("%d\n",sizeof(full_test));
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/

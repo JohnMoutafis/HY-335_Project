@@ -185,30 +185,20 @@ void *udp_receiver_dispatcher_thread(void *params);
 /*
  * General form of the default message.
  */
-typedef struct default_msg{
+typedef struct full_msg{
+	//default message
 	short int msg_type;
 	char *client_name;
 	short int TCP_listening_port;
 	long int current_time_stamp;
-}default_msg;
-
-/*
- * General form of every possible message.
- */
-typedef struct full_msg{
-	//default_msg def_msg;
+	//Extra parts
 	long int file_mod_time_stamp;
 	char* file_name;
 
 	long int file_length;
 }full_msg;
 
-/*
- * Creates a default message with the given params.
- */
-default_msg default_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts);
-
-full_msg full_message_creator(default_msg def_msg, int file_mts, char* file_name, int file_lngh);
+full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name, int file_lngh);
 
 /*END OF CUSTOM FUNCTIONS & STRUCTS*/
 
