@@ -69,6 +69,15 @@ typedef enum {
 } msg_type_t;
 
 
+/*jagathan*/
+/*struct that stores received data
+we use it to pass the parameters in 
+threads */
+struct received_data{
+	char* data;
+};
+/*jagathan -end*/
+
 /**
  * A linked list (double or single, choose what you want)
  * that keeps appropriate info for each file at the 
@@ -93,6 +102,8 @@ typedef struct dir_files_status_list {
  * in order to be able to find immediatly inconsistencies,
  */
 extern struct dir_files_status_list *watched_files;
+extern struct dir_files_status_list current_file; /*ADDED NOW by jagathan to store the hash and all public variables 
+							that we want to take from void functions*/
 
 /*
  * Print mutex, for printing nicely the messages from different threads
