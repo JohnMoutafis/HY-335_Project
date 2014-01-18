@@ -158,14 +158,14 @@ void message_interpretation(full_msg incoming)
 		printf("STATUS_MSG\n0x1 ");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d\n",incoming.current_time_stamp);
+		printf(" %ld\n",incoming.current_time_stamp);
 	}
 	else if(incoming.msg_type == NO_CHANGES_MSG)
 	{
 		printf("NO_CHANGES_MSG\n0x2");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d",incoming.current_time_stamp);
+		printf(" %ld",incoming.current_time_stamp);
 		printf(" %s\n",incoming.sha1_checksum);
 	}
 	else if(incoming.msg_type == NEW_FILE_MSG)
@@ -173,28 +173,28 @@ void message_interpretation(full_msg incoming)
 		printf("NEW_FILE_MSG\n0x3");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
-		printf(" %d\n",incoming.file_length);
+		printf(" %ld ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_CHANGED_MSG)
 	{
 		printf("FILE_CHANGED_MSG\n0x4");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
-		printf(" %d\n",incoming.file_mod_time_stamp);
+		printf(" %ld ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %ld\n",incoming.file_mod_time_stamp);
 	}
 	else if(incoming.msg_type == FILE_DELETED_MSG)
 	{
 		printf("FILE_DELETED_MSG\n0x5");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
-		printf(" %d",incoming.file_mod_time_stamp);
-		printf(" %d\n",incoming.file_length);
+		printf(" %ld ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %ld",incoming.file_mod_time_stamp);
+		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_TRANSFER_REQUEST)
 	{
@@ -202,8 +202,8 @@ void message_interpretation(full_msg incoming)
 		printf("FILE_DELETED_MSG\n0x5");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf(" %ld ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
 		printf("\n");
 	}
 	else if(incoming.msg_type == FILE_TRANSFER_OFFER)
@@ -211,16 +211,16 @@ void message_interpretation(full_msg incoming)
 		printf("FILE_TRANSFER_OFFER\n0x7");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
-		printf(" %d\n",incoming.file_length);
+		printf(" %ld ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == DIR_EMPTY)
 	{
 		printf("DIR_EMPTY\n0x8");
 		printf(" %s",incoming.client_name);
 		printf(" %d",incoming.TCP_listening_port);
-		printf(" %d ",incoming.current_time_stamp);
+		printf(" %ld ",incoming.current_time_stamp);
 		printf(" %s\n",incoming.sha1_checksum);
 	}
 }
