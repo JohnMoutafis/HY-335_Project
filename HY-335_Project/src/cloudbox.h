@@ -194,11 +194,11 @@ typedef struct full_msg{
 	//Extra parts
 	long int file_mod_time_stamp;
 	char* file_name;
-
+	char* sha1_checksum;
 	long int file_length;
 }full_msg;
 
-full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name, int file_lngh);
+full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name,char* checksum, int file_lngh);
 
 /*END OF CUSTOM FUNCTIONS & STRUCTS*/
 

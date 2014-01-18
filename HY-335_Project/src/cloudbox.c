@@ -114,37 +114,114 @@ struct dir_files_status_list* delete_file(struct dir_files_status_list *head,cha
  * Message functions
  * Moutafis
  */
-full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name, int file_lngh)
+full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name,char* checksum, int file_lngh)
 {
 	full_msg ret;
+	//default part of the message
 	ret.msg_type = msg;
 	ret.TCP_listening_port = TCP_lp;
 	ret.current_time_stamp = curr_ts;
-	ret.file_mod_time_stamp = file_mts;
-	ret.file_length = file_lngh;
-
-	int size_of_cname = strlen(client_name) + 1;
-	int size_of_fname = strlen(file_name) + 1, i;
-	char tmp_cname[size_of_cname],tmp_fname[size_of_fname];
+	int size_of_cname = strlen(client_name) + 2, i;
+	char tmp_cname[size_of_cname];
 	tmp_cname[0] = 0x0;
-	tmp_fname[0] = 0x0;
-
 	for(i=1; i<=strlen(client_name); i++)
 	{
 		tmp_cname[i] = client_name[i-1];
 	}
+	tmp_cname[size_of_cname+1] = 0x0;
+	ret.client_name = tmp_cname;
+
+	//Non default cases:
+	ret.file_mod_time_stamp = file_mts;
+	ret.file_length = file_lngh;
+	int size_of_fname = strlen(file_name) + 1;
+	char tmp_fname[size_of_fname];
+	tmp_fname[0] = 0x0;
 	for(i=1; i<=size_of_fname; i++)
 	{
 		tmp_fname[i] = file_name[i-1];
 	}
-	tmp_cname[size_of_cname] = 0x0;
 	tmp_fname[size_of_fname] = 0x0;
-
-	ret.client_name = tmp_cname;
 	ret.file_name = tmp_fname;
+	ret.sha1_checksum = checksum;
 	return ret;
 }
 
+void message_interpretation(full_msg incoming)
+{
+	int i;
+	//Message Cases
+	if (incoming.msg_type == STATUS_MSG)
+	{
+		printf("STATUS_MSG\n0x1 ");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d\n",incoming.current_time_stamp);
+	}
+	else if(incoming.msg_type == NO_CHANGES_MSG)
+	{
+		printf("NO_CHANGES_MSG\n0x2");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d",incoming.current_time_stamp);
+		printf(" %s\n",incoming.sha1_checksum);
+	}
+	else if(incoming.msg_type == NEW_FILE_MSG)
+	{
+		printf("NEW_FILE_MSG\n0x3");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf(" %d\n",incoming.file_length);
+	}
+	else if(incoming.msg_type == FILE_CHANGED_MSG)
+	{
+		printf("FILE_CHANGED_MSG\n0x4");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf(" %d\n",incoming.file_mod_time_stamp);
+	}
+	else if(incoming.msg_type == FILE_DELETED_MSG)
+	{
+		printf("FILE_DELETED_MSG\n0x5");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf(" %d",incoming.file_mod_time_stamp);
+		printf(" %d\n",incoming.file_length);
+	}
+	else if(incoming.msg_type == FILE_TRANSFER_REQUEST)
+	{
+		printf("FILE_TRANSFER_REQUEST\n0x6");
+		printf("FILE_DELETED_MSG\n0x5");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf("\n");
+	}
+	else if(incoming.msg_type == FILE_TRANSFER_OFFER)
+	{
+		printf("FILE_TRANSFER_OFFER\n0x7");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		for(i=1; i<=strlen(incoming.file_name); i++) printf("%c",incoming.file_name);
+		printf(" %d\n",incoming.file_length);
+	}
+	else if(incoming.msg_type == DIR_EMPTY)
+	{
+		printf("DIR_EMPTY\n0x8");
+		printf(" %s",incoming.client_name);
+		printf(" %d",incoming.TCP_listening_port);
+		printf(" %d ",incoming.current_time_stamp);
+		printf(" %s\n",incoming.sha1_checksum);
+	}
+}
 /*END OF MESSAGE FUNCTIONS*/
 
 /**Function of TCP Client*/
@@ -426,10 +503,8 @@ int main(int argc, char **argv){
 		client_name, watched_dir, scan_interval, broadcast_port);
 
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
-	/*unsigned char test = Default_Message_Creator(NO_CHANGES_MSG,client_name,broadcast_port,"1548784512");
-	printf("%s\n",test);*/
-	full_msg full_test = full_message_creator(NO_CHANGES_MSG, client_name, broadcast_port, 1548784512, 1550784512, watched_dir,454545445);
-	printf("%d\n",sizeof(full_test));
+	full_msg full_test = full_message_creator(NEW_FILE_MSG, client_name, broadcast_port, 1548784512, 1548784512, watched_dir,"abcdefgghshjjdaaseee", 100);
+	message_interpretation(full_test);
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/
