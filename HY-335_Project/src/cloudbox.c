@@ -20,7 +20,7 @@
  * in order to be able to find immediatly inconsistencies,
  */
 struct dir_files_status_list *watched_files;
-
+struct dir_files_status_list current_file; /*added by jagathan*/
 
 /*
  * Print mutex, for printing nicely the messages from different threads
@@ -34,7 +34,7 @@ pthread_mutex_t print_mutex;
  */
 pthread_mutex_t file_list_mutex;
 
-
+char *watched_dir; /*added by jagathan*/
 
 /*insert from list*/
 struct dir_files_status_list* insert_file(struct dir_files_status_list *head,char *filename ,size_t size_in_bytes ,char sha1sum[SHA1_BYTES_LEN],
@@ -187,44 +187,45 @@ void tcp_client(){
   
 }
 
-/**Function of UDP Client*/
-void udp_client(){
-  int sock;
-  
-  unsigned int i = 0;
-  
-  //struct sockaddr *client_addr;
-  //socklen_t client_addr_len;
 
-  if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
-    perror("opening UDP socket");
-    exit(EXIT_FAILURE);
-  }
-
-  struct sockaddr_in sin;
-  memset(&sin, 0, sizeof(struct sockaddr_in));
-  sin.sin_family = AF_INET;
-  /*Port that server listens at */
-  sin.sin_port = htons(6886);
-  /* The server's IP*/
-  sin.sin_addr.s_addr = inet_addr("192.168.1.212");
-
-  if(connect(sock, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == -1){
-    perror("udp connect");
-    exit(EXIT_FAILURE);
-  }
-
-  
-  while(i < 10){
-    printf("Look me, look me I do not block!!!\n");
-    if( sendto(sock, "Hello Server!", 14, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
-	perror("send status report");
-	exit(EXIT_FAILURE);
-    }
-    i++;
-    sleep(1);
-  }
-  close(sock);
+/*Function of UDP Client that connects to udp thread server*/
+/*jagathan*/
+void* udp_client(void* param){
+	int sock;
+	int* port=(int*)param;
+	unsigned int i = 0;
+	 
+	/* UNUSED VARS
+	struct sockaddr *client_addr;
+	socklen_t client_addr_len;*/ 
+	if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	    	perror("opening UDP socket");
+	    	exit(EXIT_FAILURE);
+	}
+	int broadcastEnable=1;
+	int ret=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+	if (ret) {
+	    	perror("Error: Could not open set socket to broadcast mode");
+		close(sock);
+		exit(EXIT_FAILURE);
+	}
+	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(struct sockaddr_in));
+	sin.sin_family = AF_INET;
+	/*Port that server listens at */
+	sin.sin_port = htons(*port);
+	/* The broadcast IP*/
+	sin.sin_addr.s_addr = inet_addr("255.255.255.255");
+	while(i < 10){
+		printf("Look me, look me I do not block !!! \n");
+	    	if( sendto(sock,"Hello Server!",14, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+			perror("send status report");
+			exit(EXIT_FAILURE);
+		}
+		i++;
+		sleep(1);
+	}
+	close(sock);
 }
 
 /**Function of TCP Server*/
@@ -274,49 +275,88 @@ void tcp_server(){
   }
 }
 
-/**Function of UDP Server*/
-void udp_server(){
-   char buffer[512];
-  
-  int sock;
-  int accepted;
-  int received;
-  struct sockaddr_in sin;
+/*Function of UDP Server usinig threads*/
+/*jagathan*/
+void* udp_server(void* param){
+	char buffer[512];  
+	int sock;
+	/*int accepted;*/
+	int received;
+	
+	int* port=(int*)param;
+	struct sockaddr_in sin;
 
-  struct sockaddr client_addr;
-  socklen_t client_addr_len;
-
-  
-  if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
-    perror("opening UDP socket");
-    exit(EXIT_FAILURE);
-  }
-  
-  memset(&sin, 0, sizeof(struct sockaddr_in));
-  sin.sin_family = AF_INET;
-  sin.sin_port = htons(6886);
-  /* Bind to all available network interfaces */
-  sin.sin_addr.s_addr = INADDR_ANY;
-
-  if(bind(sock, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == -1){
-    perror("UDP bind");
-    exit(EXIT_FAILURE);
-  }
-
-
-  while(1){
-    memset(buffer, 0, 512);
-    if( (received = read(sock, buffer, 511)) == -1){
-      perror("UDP read");
-      exit(EXIT_FAILURE);
-    }
-    buffer[received] = 0;
-    printf("Received: %s\n", buffer);
-    printf("Going to sleep for 5 secs... Like a boss!\n");
-    sleep(5);
-  }
+	/* UNUSED VARS
+	struct sockaddr client_addr;*/
+	/*socklen_t client_addr_len;*/
+	struct received_data *d;
+	
+	/*create socket*/
+	if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
+	    	perror("opening UDP soc	ket");
+		exit(EXIT_FAILURE);
+	}
+	memset(&sin, 0, sizeof(struct sockaddr_in));
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(*port);
+	/* Bind to all available network interfaces */
+	sin.sin_addr.s_addr = INADDR_ANY;
+	
+	/*create the new thread */
+	pthread_t new_thread;// = malloc(sizeof(pthread_t));
+ 	pthread_attr_t thread_attributes;
+	/* Initialize the attributes of the threads */
+	pthread_attr_init(&thread_attributes);
+	/*Set the detache state to JOINABLE*/
+	pthread_attr_setdetachstate(&thread_attributes, PTHREAD_CREATE_JOINABLE);
+	if(bind(sock, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == -1){
+	    	perror("UDP bind");
+	    	exit(EXIT_FAILURE);
+	}
+	
+	while(1){
+	    	memset(buffer, 0, 512);
+		if((received = read(sock, buffer, 511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}	
+		else{/*when recieves from a client opens a thread and do stuff*/	
+			new_thread = malloc(sizeof(pthread_t));
+			/*Create the thread and pass the socket discriptor*/
+			buffer[received] = 0;
+			d=(struct received_data*)malloc(sizeof(struct received_data));	
+			d->data=(char*)malloc(sizeof(char*));
+			strcpy(d->data,buffer);
+			if(pthread_create(&new_thread, (void*)&thread_attributes,(void*) &udp_receiver_dispatcher_thread,(void*)d)!= 0){
+			      perror("create thread");
+			      exit(EXIT_FAILURE);
+			}
+	        } 
+	}
+	pause();
 }
+  
+/*jagathan*/
+/*handles every client that connects*/
+void* udp_receiver_dispatcher_thread(void *params){
+	struct received_data* msg=(struct received_data*)params;	
+	printf("Received: %s\n",msg->data);
+	printf("Going to sleep for 2 secs... Like a boss!\n");
+	sleep(2);
+	pthread_exit(NULL);
+}
+/*jagathan*/
+/*computes sha1 an stores it in current_file struct*/
+void compute_sha1_of_file(char *outbuff, char *filename){
+	size_t length=strlen(filename);
+	unsigned char hash[SHA1_BYTES_LEN];
+	int i;	
+	outbuff=SHA1(filename,length,hash);
+	for(i=0;i<SHA1_BYTES_LEN;i++){
+		current_file.sha1sum[i]=hash[i];
+	}
 
+}
 /*Edit by Rafas*/
 /**Function to find filesize portable*/
 long filesize(const char *filename)
@@ -342,7 +382,14 @@ int main(int argc, char **argv){
 	char *watched_dir;
 	DIR *dir;
         struct dirent *files;
-
+	
+	/*edited by jagathan*/
+	pthread_t thread_udpserver;
+  	pthread_t thread_udpclient;  
+  	pthread_attr_t thread_udpserver_attributes;
+  	pthread_attr_t thread_udpclient_attributes;
+	/*end -jagathan*/
+	
 	watched_files=NULL;
 	
 	/*
@@ -413,10 +460,10 @@ int main(int argc, char **argv){
 		strcat(p,files->d_name);
   
 		fsize=filesize(p);
-		
+		compute_sha1_of_file(files->d_name,current_file.sha1sum);/* added by jagathan */
 		printf("File (%s) size: %d bytes\n",files->d_name, fsize);
 		
-                watched_files=insert_file(watched_files,files->d_name,fsize,"sha",0);
+                watched_files=insert_file(watched_files,files->d_name,fsize,current_file.sha1sum,0);
                 files=readdir(dir);
                 
                 
@@ -427,10 +474,26 @@ int main(int argc, char **argv){
                 printf("\n%s",watched_files->filename);
                 watched_files=watched_files->next;
         }
-
-    udp_server();
-    tcp_server();
-    udp_client();
-    tcp_client();
+	
+	/* Edited by jagathan */
+	/*create the threads for udp server and client*/
+	/* Initialize the attributes of the threads */
+	pthread_attr_init(&thread_udpserver_attributes);
+	pthread_attr_init(&thread_udpclient_attributes);
+	/*Set the detache state to JOINABLE*/
+	pthread_attr_setdetachstate(&thread_udpserver_attributes, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&thread_udpclient_attributes, PTHREAD_CREATE_JOINABLE);
+	
+	if( pthread_create(&thread_udpserver, &thread_udpserver_attributes, &udp_server,(void*)&broadcast_port) != 0){
+		perror("create thread udpserver");
+	    	exit(EXIT_FAILURE);
+  	}	
+	if( pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)&broadcast_port) != 0){
+		perror("create thread udpclient");
+	    	exit(EXIT_FAILURE);
+  	}
+	
+	pause();	
+	/* end -jagathan*/
 	return 0;
 }
