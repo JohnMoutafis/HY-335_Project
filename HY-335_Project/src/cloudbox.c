@@ -12,6 +12,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
+//add a new include by rafas
+#include <sys/stat.h>
 
 /*
  * The list that holds all the current watched files.
@@ -439,6 +441,24 @@ long size = 0;
 }
 /*End of Changes*/
 
+
+/*Get last Modified time from file
+ By Rafas*/
+
+long int *get_last_modified(char *file) {
+    struct tm *clock,*clock1;
+    struct stat attr;
+
+    stat(file, &attr);
+    clock = gmtime(&(attr.st_mtime));
+
+    clock1 = mktime(clock);
+    printf("\nHumans Time:%s", asctime(clock));
+    return mktime(clock);
+}
+
+/*end rafas function*/
+
 int main(int argc, char **argv){
 
 	int opt;
@@ -457,6 +477,8 @@ int main(int argc, char **argv){
   	pthread_attr_t thread_udpserver_attributes;
   	pthread_attr_t thread_udpclient_attributes;
 	/*end -jagathan*/
+	
+	/*added by rafas*/long long int clock;
 	
 	watched_files=NULL;
 	
@@ -515,19 +537,20 @@ int main(int argc, char **argv){
 	}
         files=readdir( dir);
         while(files){
-                /*Edit by Rafas*/
-		
+                 /*Edit by Rafas*/
 		
 		strcpy(p,watched_dir);
 		
 		
 		strcat(p,files->d_name);
-  
+		printf("File:  %s",files->d_name);
+		clock=get_last_modified(p);
+		printf("Since the Epoch: [%ld seconds]\n",clock);
 		fsize=filesize(p);
 		compute_sha1_of_file(files->d_name,current_file.sha1sum);/* added by jagathan */
-		printf("File (%s) size: %d bytes\n",files->d_name, fsize);
+		printf("File size: %d bytes\n\n", fsize);
 		
-                watched_files=insert_file(watched_files,files->d_name,fsize,current_file.sha1sum,0);
+                watched_files=insert_file(watched_files,files->d_name,fsize,current_file.sha1sum,clock);
                 files=readdir(dir);
                 
                 
