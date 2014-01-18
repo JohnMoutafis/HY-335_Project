@@ -392,8 +392,8 @@ int main(int argc, char **argv){
 	printf("%s\n",test);*/
 	default_msg test = default_message_creator(NO_CHANGES_MSG, client_name, broadcast_port, 1548784512);
 	full_msg full_test = full_message_creator(test, 1550784512, watched_dir,454545445);
-	long double test_int;
-	printf("%d",sizeof(test_int));
+	long long int test_int;
+	printf("%d\n",sizeof(test_int));
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/
