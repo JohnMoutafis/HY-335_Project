@@ -161,8 +161,8 @@ void tcp_client(){
   
   int sock;
   
-  struct sockaddr *client_addr;
-  socklen_t client_addr_len;
+ // struct sockaddr *client_addr;
+ // socklen_t client_addr_len;
 
   if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1){
     perror("opening TCP socket");
@@ -193,8 +193,8 @@ void udp_client(){
   
   unsigned int i = 0;
   
-  struct sockaddr *client_addr;
-  socklen_t client_addr_len;
+  //struct sockaddr *client_addr;
+  //socklen_t client_addr_len;
 
   if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
     perror("opening UDP socket");
