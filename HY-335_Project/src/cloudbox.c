@@ -123,7 +123,7 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 	ret.msg_type = msg;
 	ret.TCP_listening_port = TCP_lp;
 	ret.current_time_stamp = curr_ts;
-	int size_of_cname = strlen(client_name) + 2, i;
+	/*int size_of_cname = strlen(client_name) + 2, i;
 	char tmp_cname[size_of_cname];
 	tmp_cname[0] = 0x0;
 	for(i=1; i<=strlen(client_name); i++)
@@ -131,12 +131,12 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 		tmp_cname[i] = client_name[i-1];
 	}
 	tmp_cname[size_of_cname+1] = 0x0;
-	ret.client_name = tmp_cname;
-
+	ret.client_name = tmp_cname;*/
+	ret.client_name = client_name;
 	//Non default cases:
 	ret.file_mod_time_stamp = file_mts;
 	ret.file_length = file_lngh;
-	int size_of_fname = strlen(file_name) + 1;
+	int size_of_fname = strlen(file_name) + 1,i;
 	char tmp_fname[size_of_fname];
 	tmp_fname[0] = 0x0;
 	for(i=1; i<=size_of_fname; i++)
@@ -152,18 +152,28 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 void message_interpretation(full_msg incoming)
 {
 	int i;
+	int cname_size = sizeof(incoming.client_name), fname_size = sizeof(incoming.file_name);
+	char cname_tmp[cname_size], fname_tmp[fname_size];
+	for(i=0; i<cname_size; i++)
+	{
+		cname_tmp[i] = incoming.client_name[i];
+	}
+	for(i=0; i<fname_size; i++)
+	{
+		fname_tmp[i] = incoming.file_name[i];
+	}
 	//Message Cases
 	if (incoming.msg_type == STATUS_MSG)
 	{
 		printf("STATUS_MSG\n0x1 ");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld\n",incoming.current_time_stamp);
 	}
 	else if(incoming.msg_type == NO_CHANGES_MSG)
 	{
 		printf("NO_CHANGES_MSG\n0x2");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld",incoming.current_time_stamp);
 		printf(" %s\n",incoming.sha1_checksum);
@@ -171,54 +181,52 @@ void message_interpretation(full_msg incoming)
 	else if(incoming.msg_type == NEW_FILE_MSG)
 	{
 		printf("NEW_FILE_MSG\n0x3");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %s",fname_tmp);
 		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_CHANGED_MSG)
 	{
 		printf("FILE_CHANGED_MSG\n0x4");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %s",fname_tmp);
 		printf(" %ld\n",incoming.file_mod_time_stamp);
 	}
 	else if(incoming.msg_type == FILE_DELETED_MSG)
 	{
 		printf("FILE_DELETED_MSG\n0x5");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %s",fname_tmp);
 		printf(" %ld",incoming.file_mod_time_stamp);
 		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_TRANSFER_REQUEST)
 	{
 		printf("FILE_TRANSFER_REQUEST\n0x6");
-		printf("FILE_DELETED_MSG\n0x5");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
-		printf("\n");
+		printf(" %s\n",fname_tmp);
 	}
 	else if(incoming.msg_type == FILE_TRANSFER_OFFER)
 	{
 		printf("FILE_TRANSFER_OFFER\n0x7");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
-		for(i=1; i<=strlen(incoming.file_name); i++) printf("%s",incoming.file_name);
+		printf(" %s",fname_tmp);
 		printf(" %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == DIR_EMPTY)
 	{
 		printf("DIR_EMPTY\n0x8");
-		printf(" %s",incoming.client_name);
+		printf(" %s",cname_tmp);
 		printf(" %d",incoming.TCP_listening_port);
 		printf(" %ld ",incoming.current_time_stamp);
 		printf(" %s\n",incoming.sha1_checksum);
