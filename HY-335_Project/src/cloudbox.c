@@ -123,7 +123,7 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 	ret.msg_type = msg;
 	ret.TCP_listening_port = TCP_lp;
 	ret.current_time_stamp = curr_ts;
-	/*int size_of_cname = strlen(client_name) + 2, i;
+	int size_of_cname = strlen(client_name) + 2, i;
 	char tmp_cname[size_of_cname];
 	tmp_cname[0] = 0x0;
 	for(i=1; i<=strlen(client_name); i++)
@@ -131,12 +131,11 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 		tmp_cname[i] = client_name[i-1];
 	}
 	tmp_cname[size_of_cname+1] = 0x0;
-	ret.client_name = tmp_cname;*/
-	ret.client_name = client_name;
+	ret.client_name = tmp_cname;
 	//Non default cases:
 	ret.file_mod_time_stamp = file_mts;
 	ret.file_length = file_lngh;
-	int size_of_fname = strlen(file_name) + 1,i;
+	int size_of_fname = strlen(file_name) + 1;
 	char tmp_fname[size_of_fname];
 	tmp_fname[0] = 0x0;
 	for(i=1; i<=size_of_fname; i++)
@@ -154,13 +153,13 @@ void message_interpretation(full_msg incoming)
 	int i;
 	int cname_size = sizeof(incoming.client_name), fname_size = sizeof(incoming.file_name);
 	char cname_tmp[cname_size], fname_tmp[fname_size];
-	for(i=0; i<cname_size; i++)
+	for(i=1; i<cname_size-1; i++)
 	{
-		cname_tmp[i] = incoming.client_name[i];
+		cname_tmp[i-1] = incoming.client_name[i];
 	}
-	for(i=0; i<fname_size; i++)
+	for(i=1; i<fname_size-1; i++)
 	{
-		fname_tmp[i] = incoming.file_name[i];
+		fname_tmp[i-1] = incoming.file_name[i];
 	}
 	//Message Cases
 	if (incoming.msg_type == STATUS_MSG)
