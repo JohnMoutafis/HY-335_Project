@@ -69,14 +69,6 @@ typedef enum {
 } msg_type_t;
 
 
-/*jagathan*/
-/*struct that stores received data
-we use it to pass the parameters in 
-threads */
-struct received_data{
-	char* data;
-};
-/*jagathan -end*/
 
 /**
  * A linked list (double or single, choose what you want)
@@ -178,7 +170,7 @@ void *udp_receiver_dispatcher_thread(void *params);
 
 /*
  * =========================================================
- * 				CUSTOM FUNCTIONS & STRUCTS TEAM:
+ * 			CUSTOM FUNCTIONS & STRUCTS TEAM:
  * =========================================================
  */
 
