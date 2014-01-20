@@ -230,6 +230,10 @@ void message_interpretation(full_msg incoming)
 		printf(" %ld ",incoming.current_time_stamp);
 		printf(" %s\n",incoming.sha1_checksum);
 	}
+	else if(incoming.msg_type == NOP)
+	{
+		printf("Debug message!\n");
+	}
 }
 /*END OF MESSAGE FUNCTIONS*/
 
@@ -237,6 +241,10 @@ void message_interpretation(full_msg incoming)
 void tcp_client(){
   
   int sock;
+  //Added by Moutafis
+  char buffer[512];
+  int received;
+ //end
   
  // struct sockaddr *client_addr;
  // socklen_t client_addr_len;
@@ -260,6 +268,11 @@ void tcp_client(){
   }
   sleep(15);
   send(sock, "Hello Server!", 14, 0);
+  //Added by Moutafis
+  received = recv(sock,buffer,511,0);
+  buffer[received] = 0;
+  printf("Received from Server: %s\n",buffer);
+  //end
   close(sock);
   
 }
@@ -343,11 +356,16 @@ void tcp_server(){
   /* Ok, a tricky part here. See man accept() for details */
 
   client_addr_len = sizeof(struct sockaddr);
-  while((accepted = accept(sock, &client_addr, &client_addr_len)) > 0 ){
+  while((accepted = accept(sock, &client_addr, &client_addr_len)) > 0 )
+  {
     printf("New connection accepted!\n");
     received = recv(accepted, buffer, 511, 0);
     buffer[received] = 0;
     printf("Received from client: %s\n",buffer);
+    //added by Moutafis
+    int debug_size = sizeof("Debug Message.");
+    send(sock, "Debug Message.", debug_size, 0);
+    //end
     close(accepted);
   }
 }
@@ -532,7 +550,7 @@ int main(int argc, char **argv){
 		client_name, watched_dir, scan_interval, broadcast_port);
 
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
-	full_msg full_test = full_message_creator(FILE_DELETED_MSG, client_name, broadcast_port, 1548784512, 1548784512, watched_dir,"abcdefgghshjjdaaseee", 100);
+	full_msg full_test = full_message_creator(NOP, client_name, broadcast_port, 1548784512, 1548784512, watched_dir,"abcdefgghshjjdaaseee", 100);
 	message_interpretation(full_test);
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
 
