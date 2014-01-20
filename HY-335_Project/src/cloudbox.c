@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h> 
 #include <arpa/inet.h>
+#include <math.h>
 //add a new include by rafas
 #include <sys/stat.h>
 
@@ -37,6 +38,7 @@ pthread_mutex_t print_mutex;
 pthread_mutex_t file_list_mutex;
 
 char *watched_dir; /*added by jagathan*/
+
 
 /*insert from list*/
 struct dir_files_status_list* insert_file(struct dir_files_status_list *head,char *filename ,size_t size_in_bytes ,char sha1sum[SHA1_BYTES_LEN],
@@ -102,6 +104,7 @@ struct dir_files_status_list* delete_file(struct dir_files_status_list *head,cha
 	                prev->next=NULL;
 	                free(cur->filename);
 	                free(cur);
+			
 	                return head;
 	        }
 	        prev->next=cur->next;
@@ -132,6 +135,7 @@ full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int
 	}
 	tmp_cname[size_of_cname+1] = 0x0;
 	ret.client_name = tmp_cname;
+
 	//Non default cases:
 	ret.file_mod_time_stamp = file_mts;
 	ret.file_length = file_lngh;
@@ -161,49 +165,50 @@ void message_interpretation(full_msg incoming)
 	{
 		fname_tmp[i-1] = incoming.file_name[i];
 	}
+	printf("\n\t\tUDP Packet received\n");
 	//Message Cases
 	if (incoming.msg_type == STATUS_MSG)
 	{
-		printf("STATUS_MSG\n0x1 ");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld\n",incoming.current_time_stamp);
+		printf("\nSTATUS_MSG: 0x1\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time: %ld\n",incoming.current_time_stamp);
 	}
 	else if(incoming.msg_type == NO_CHANGES_MSG)
 	{
-		printf("NO_CHANGES_MSG\n0x2");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld",incoming.current_time_stamp);
-		printf(" %s\n",incoming.sha1_checksum);
+		printf("\nNO_CHANGES_MSG: 0x2\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time: %ld\n",incoming.current_time_stamp);
+		//printf("Sha1: %s\n",incoming.sha1_checksum);
 	}
 	else if(incoming.msg_type == NEW_FILE_MSG)
 	{
-		printf("NEW_FILE_MSG\n0x3");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s",fname_tmp);
-		printf(" %ld\n",incoming.file_length);
+		printf("\nNEW_FILE_MSG: 0x3\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time: %ld\n",incoming.current_time_stamp);
+		printf("File name: %s\n",fname_tmp);
+		printf("File length: %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_CHANGED_MSG)
 	{
-		printf("FILE_CHANGED_MSG\n0x4");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s",fname_tmp);
-		printf(" %ld\n",incoming.file_mod_time_stamp);
+		printf("\nFILE_CHANGED_MSG: 0x4\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time: %ld\n",incoming.current_time_stamp);
+		printf("File name: %s\n",fname_tmp);
+		printf("File mod time: %ld\n",incoming.file_mod_time_stamp);
 	}
 	else if(incoming.msg_type == FILE_DELETED_MSG)
 	{
-		printf("FILE_DELETED_MSG\n0x5");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s",fname_tmp);
-		printf(" %ld",incoming.file_mod_time_stamp);
-		printf(" %ld\n",incoming.file_length);
+		printf("\nFILE_DELETED_MSG: 0x5\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time: %ld\n",incoming.current_time_stamp);
+		printf("File name: %s\n",fname_tmp);
+		printf("File mod time: %ld\n",incoming.file_mod_time_stamp);
+		printf("File length: %ld\n",incoming.file_length);
 	}
 	else if(incoming.msg_type == FILE_TRANSFER_REQUEST)
 	{
@@ -224,21 +229,17 @@ void message_interpretation(full_msg incoming)
 	}
 	else if(incoming.msg_type == DIR_EMPTY)
 	{
-		printf("DIR_EMPTY\n0x8");
-		printf(" %s",cname_tmp);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s\n",incoming.sha1_checksum);
-	}
-	else if(incoming.msg_type == NOP)
-	{
-		printf("Debug message!\n");
+		printf("DIR_EMPTY: 0x8\n");
+		printf("Client name: %s\n",cname_tmp);
+		printf("Port: %d\n",incoming.TCP_listening_port);
+		printf("Client time %ld:",incoming.current_time_stamp);
+		//printf("Sah1: %s\n\n",incoming.sha1_checksum);
 	}
 }
 /*END OF MESSAGE FUNCTIONS*/
 
 /**Function of TCP Client*/
-void tcp_client(){
+void tcp_client(int port){
   
   int sock;
   //Added by Moutafis
@@ -258,7 +259,7 @@ void tcp_client(){
   memset(&sin, 0, sizeof(struct sockaddr_in));
   sin.sin_family = AF_INET;
   /*Port that server listens at */
-  sin.sin_port = htons(6886);
+  sin.sin_port = htons(port);
   /* The server's IP*/
   sin.sin_addr.s_addr = inet_addr("192.168.1.212");
 
@@ -276,15 +277,26 @@ void tcp_client(){
   close(sock);
   
 }
-
-
+/*helper function to get the number of short int digits*/
+int get_shortint_len (short int value){
+	int l=2;
+	while(value>9){ l++; value/=10; }
+	return l;
+}
+/*helper function to get the number of long int digits*/
+int get_longint_len (long int value){
+	int l=2;
+	while(value>9){ l++; value/=10; }
+	return l;
+}
 /*Function of UDP Client that connects to udp thread server*/
 /*jagathan*/
 void* udp_client(void* param){
+	
 	int sock;
-	int* port=(int*)param;
-	unsigned int i = 0;
-	 
+	full_msg* msg=(full_msg*)param;
+	int port=msg->TCP_listening_port;
+	char* str;
 	/* UNUSED VARS
 	struct sockaddr *client_addr;
 	socklen_t client_addr_len;*/ 
@@ -303,29 +315,69 @@ void* udp_client(void* param){
 	memset(&sin, 0, sizeof(struct sockaddr_in));
 	sin.sin_family = AF_INET;
 	/*Port that server listens at */
-	sin.sin_port = htons(*port);
+	sin.sin_port = htons(port);
 	/* The broadcast IP*/
 	sin.sin_addr.s_addr = inet_addr("255.255.255.255");
-	while(i < 10){
-		printf("Look me, look me I do not block !!! \n");
-	    	if( sendto(sock,"Hello Server!",14, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
-			perror("send status report");
-			exit(EXIT_FAILURE);
-		}
-		i++;
-		sleep(1);
+	str=(char*)malloc(sizeof(char*));
+	snprintf(str,get_shortint_len(msg->msg_type),"%hd",msg->msg_type);
+	if(sendto(sock,str,sizeof(str),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report1");
+		exit(EXIT_FAILURE);
+	}
+
+	if(sendto(sock,msg->client_name,sizeof(msg->client_name),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report2");
+		exit(EXIT_FAILURE);
+	}
+		
+	snprintf(str,get_shortint_len(msg->TCP_listening_port),"%hd",msg->TCP_listening_port);
+	if(sendto(sock,str,sizeof(str),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report3");
+		exit(EXIT_FAILURE);
+	}
+	
+	snprintf(str,get_longint_len(msg->current_time_stamp),"%ld",msg->current_time_stamp);
+	if(sendto(sock,str,sizeof(str),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report4");
+		exit(EXIT_FAILURE);
+	}
+
+	snprintf(str,get_longint_len(msg->file_mod_time_stamp),"%ld",msg->file_mod_time_stamp);
+	if(sendto(sock,str,sizeof(str),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report5");
+		exit(EXIT_FAILURE);
+	}
+
+	if(sendto(sock,msg->file_name,sizeof(msg->file_name),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report6");
+		exit(EXIT_FAILURE);
+	}
+
+	if(sendto(sock,msg->file_name,sizeof(msg->sha1_checksum),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report7");
+		exit(EXIT_FAILURE);
+	}
+
+	snprintf(str,get_longint_len(msg->file_length),"%ld",msg->file_length);
+	if(sendto(sock,str,sizeof(str),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1){
+		perror("send status report8");
+		exit(EXIT_FAILURE);
 	}
 	close(sock);
+	pthread_exit(NULL);
+	/*free(str);*/
 }
 
+
+
 /**Function of TCP Server*/
-void tcp_server(){
+void* tcp_server(void* param){
   char buffer[512];
   
   int sock;
   int accepted;
   int received;
-  
+  int *port=(int*)param;
   struct sockaddr_in sin;
 
   struct sockaddr client_addr;
@@ -339,7 +391,7 @@ void tcp_server(){
   
   memset(&sin, 0, sizeof(struct sockaddr_in));
   sin.sin_family = AF_INET;
-  sin.sin_port = htons(6886);
+  sin.sin_port = htons(*port);
   /* Bind to all available network interfaces */
   sin.sin_addr.s_addr = INADDR_ANY;
 
@@ -373,18 +425,20 @@ void tcp_server(){
 /*Function of UDP Server usinig threads*/
 /*jagathan*/
 void* udp_server(void* param){
+	
+	
 	char buffer[512];  
 	int sock;
 	/*int accepted;*/
-	int received;
-	
-	int* port=(int*)param;
+	int r;
+	full_msg* received=(full_msg*)malloc(sizeof(full_msg));
+	//full_msg* msg=(full_msg*)param;
+	//int port=msg->TCP_listening_port;
+	int *port=(int*)param;	
 	struct sockaddr_in sin;
-
 	/* UNUSED VARS
 	struct sockaddr client_addr;*/
 	/*socklen_t client_addr_len;*/
-	struct received_data *d;
 	
 	/*create socket*/
 	if((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1){
@@ -407,36 +461,104 @@ void* udp_server(void* param){
 	if(bind(sock, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == -1){
 	    	perror("UDP bind");
 	    	exit(EXIT_FAILURE);
-	}
-	
+	}	
 	while(1){
+
 	    	memset(buffer, 0, 512);
-		if((received = read(sock, buffer, 511)) == -1){
+		if((r =read(sock,buffer,511)) == -1){
+			
 			perror("UDP read");
 		  	exit(EXIT_FAILURE);
 		}	
-		else{/*when recieves from a client opens a thread and do stuff*/	
+		else{		
+			buffer[r]=0;
+			sscanf(buffer, "%hd", &received->msg_type);
+			memset(buffer, 0, 512);
+	        }
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			received->client_name=(char*)malloc(strlen(buffer)*sizeof(char));
+			strcpy(received->client_name,buffer);
+			memset(buffer, 0, 512);
+		}
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			sscanf(buffer, "%hd", &received->TCP_listening_port);
+			memset(buffer, 0, 512);
+		}
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			sscanf(buffer,"%ld", &received->current_time_stamp);
+			memset(buffer, 0, 512);
+		}
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			sscanf(buffer,"%ld", &received->file_mod_time_stamp);
+			memset(buffer, 0, 512);
+		}		
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			received->file_name=(char*)malloc(strlen(buffer)*sizeof(char));
+			strcpy(received->file_name,buffer);
+			memset(buffer, 0, 512);
+		}
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
+			received->sha1_checksum=(char*)malloc(strlen(buffer)*sizeof(char));
+			strcpy(received->sha1_checksum,buffer);
+			memset(buffer, 0, 512);
+		}
+		if((r =read(sock,buffer,511)) == -1){
+			perror("UDP read");
+		  	exit(EXIT_FAILURE);
+		}
+		else{
+			buffer[r]=0;
 			new_thread = malloc(sizeof(pthread_t));
-			/*Create the thread and pass the socket discriptor*/
-			buffer[received] = 0;
-			d=(struct received_data*)malloc(sizeof(struct received_data));	
-			d->data=(char*)malloc(sizeof(char*));
-			strcpy(d->data,buffer);
-			if(pthread_create(&new_thread, (void*)&thread_attributes,(void*) &udp_receiver_dispatcher_thread,(void*)d)!= 0){
-			      perror("create thread");
-			      exit(EXIT_FAILURE);
+			sscanf(buffer,"%ld", &received->file_length);
+			if(pthread_create(&new_thread, (void*)&thread_attributes,(void*) &udp_receiver_dispatcher_thread,(void*)received)!= 0){
+			 	 perror("create thread");
+			      	exit(EXIT_FAILURE);
 			}
-	        } 
+		}
+	
 	}
 	pause();
+	
+	/*free(received);*/
 }
-  
 /*jagathan*/
 /*handles every client that connects*/
 void* udp_receiver_dispatcher_thread(void *params){
-	struct received_data* msg=(struct received_data*)params;	
-	printf("Received: %s\n",msg->data);
-	printf("Going to sleep for 2 secs... Like a boss!\n");
+	pthread_mutex_lock(&print_mutex);
+	full_msg* msg=(full_msg*)params;	
+	message_interpretation(*msg);
+	pthread_mutex_unlock(&print_mutex);
+	//tcp_client(msg->TCP_listening_port);
 	sleep(2);
 	pthread_exit(NULL);
 }
@@ -456,13 +578,12 @@ void compute_sha1_of_file(char *outbuff, char *filename){
 /**Function to find filesize portable*/
 long filesize(const char *filename)
 {
-FILE *f = fopen(filename,"rb");  /* open the file in read only */
-
-long size = 0;
-  if (fseek(f,0,SEEK_END)==0) /* seek was successful */
-      size = ftell(f);
-  fclose(f);
-  return size;
+	FILE *f = fopen(filename,"rb");  /* open the file in read only */
+	long size = 0;
+	if (fseek(f,0,SEEK_END)==0) /* seek was successful */
+	      size = ftell(f);
+	fclose(f);
+	return size;
 }
 /*End of Changes*/
 
@@ -470,7 +591,7 @@ long size = 0;
 /*Get last Modified time from file
  By Rafas*/
 
-long int *get_last_modified(char *file) {
+long int get_last_modified(char *file) {
     struct tm *clock,*clock1;
     struct stat attr;
 
@@ -478,11 +599,202 @@ long int *get_last_modified(char *file) {
     clock = gmtime(&(attr.st_mtime));
 
     clock1 = mktime(clock);
-    printf("\nHumans Time:%s", asctime(clock));
+   // printf("\nHumans Time:%s", asctime(clock));
     return mktime(clock);
 }
-
+char* get_current_time(){
+	time_t rawtime;
+	struct tm * timeinfo;
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	return asctime (timeinfo) ;
+}
 /*end rafas function*/
+int founded=0;
+int flag=0;
+int i=0;
+int del=0;
+void* scan_for_file_changes_thread(void* params){
+	  	
+	printf("\n\n");
+	full_msg *msg=(full_msg*)params;
+	full_msg *new_msg=(full_msg*)malloc(sizeof(full_msg));
+	char p[100];
+	long long int clock;
+	int fsize;
+	DIR *fdir;
+	struct dirent *ffiles,*lfiles;
+	struct dir_files_status_list *cur=watched_files;
+	int list_length=0;
+	int check_dir=0;
+	int modify=0;
+	long int cur_time;
+	pthread_t thread_udpclient; 
+	pthread_attr_t thread_udpclient_attributes;
+	flag=0;
+	sscanf(get_current_time(),"%ld", &cur_time);
+	//printf("TIME %s %ld",get_current_time(),cur_time);
+	pthread_attr_init(&thread_udpclient_attributes);
+	/*Set the detache state to JOINABLE*/
+	pthread_attr_setdetachstate(&thread_udpclient_attributes, PTHREAD_CREATE_JOINABLE);
+
+	pthread_mutex_lock(&file_list_mutex);
+	pthread_mutex_lock(&print_mutex);
+	fdir=opendir(msg->file_name);
+	if(!fdir){
+		printf("\nThe directory path does not exist12 %s",msg->file_name);
+		exit(-1);
+	}
+	//printf("\t\t\t\t\t\tStarts Checking of files %d\n",i);
+	ffiles=readdir(fdir);
+
+	while(ffiles){
+		if((strcmp(ffiles->d_name,".")==0)||(strcmp(ffiles->d_name,"..")==0)){
+			ffiles=readdir(fdir);
+			continue;
+		}
+		list_length=0;
+		strcpy(p,msg->file_name);
+				
+		strcat(p,ffiles->d_name);
+		//printf("\n\nIN FUNCTION:File:  %s",ffiles->d_name);
+		clock=get_last_modified(p);
+		//printf("IN FUNCTION:Since the Epoch: [%lld seconds]\n",clock);
+		fsize=filesize(p);
+		compute_sha1_of_file(current_file.sha1sum,ffiles->d_name);/* added by jagathan */
+		//printf("File size: %d bytes\n\n", fsize);
+	        cur=watched_files;
+		while(cur){
+			list_length++;
+			if(!strcmp(ffiles->d_name,cur->filename)){
+				check_dir++;
+				//printf("Found [%s] int the list [%s]\n",ffiles->d_name,cur->filename);
+				flag=2;
+			}
+		   	if(!strcmp(ffiles->d_name,cur->filename)){
+		    		if(fsize!=cur->size_in_bytes){
+					//printf("\nMPIKA1");
+		      			modify=1;
+		      			flag=4;//modify
+		      			//if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
+		      			cur->size_in_bytes=fsize;
+					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
+									msg->file_name,current_file.sha1sum, fsize);
+	
+					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+						perror("create thread udpclient");
+				    		exit(EXIT_FAILURE);
+			  		}
+		    		}
+		    		if(clock!=cur->modifictation_time_from_epoch){
+					//printf("\nMPIKA2");
+					modify=1;
+		       			flag=4;//modify
+		       			//if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
+		      			cur->modifictation_time_from_epoch=clock;
+					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
+									msg->file_name,current_file.sha1sum, fsize);
+	
+					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+						perror("create thread udpclient");
+				    		exit(EXIT_FAILURE);
+			  		}
+		    		}
+		    		if(strcmp(current_file.sha1sum,cur->sha1sum)!=0){
+					//printf("\nMPIKA3");
+		    	  		strcpy(cur->sha1sum,current_file.sha1sum);
+					flag=4;
+					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
+									msg->file_name,current_file.sha1sum, fsize);
+	
+					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+						perror("create thread udpclient");
+				    		exit(EXIT_FAILURE);
+			  		}
+		   		}	
+		   		 
+		  	}
+		  	cur=cur->next;
+		}
+			 
+		if(flag==0)
+		{	
+			watched_files=insert_file(watched_files,ffiles->d_name,fsize,current_file.sha1sum,clock);
+			flag=3;//add new file
+		        if(flag==3){
+				//printf("\n\n\nProstethike ena arxeio\n\n\n");
+				*new_msg=full_message_creator(NEW_FILE_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, msg->file_name,current_file.sha1sum, fsize);
+				
+				if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+					perror("create thread udpclient");
+				    	exit(EXIT_FAILURE);
+			  	}
+			}
+		}
+		    
+		flag=0;
+		modify=0;
+		ffiles=readdir(fdir);
+	}
+	
+	/*if((!ffiles) && (list_length==0)){
+		flag=1;//flag=1 not founded
+		*new_msg=full_message_creator(DIR_EMPTY, msg->client_name,msg->TCP_listening_port, cur_time, 0, msg->file_name,"-", 0);
+		if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+			perror("create thread udpclient");
+		    	exit(EXIT_FAILURE);
+	  	}
+		pause();
+		pthread_exit(NULL);
+		return;
+	}*/
+	if(list_length==check_dir && modify==0){//den eginan allages
+	  	//printf("\n\n\nDen eginan allages %s\n\n\n",msg->client_name);
+		*new_msg=full_message_creator(NO_CHANGES_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, "","", 0);/* OXI SHA1 KAI OXI PROSFATO CLOCK*/
+	}
+	pthread_mutex_unlock(&file_list_mutex);
+	pthread_mutex_unlock(&print_mutex);
+	
+	if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+		perror("create thread udpclient");
+	    	exit(EXIT_FAILURE);
+  	}
+	del=0;
+	cur=watched_files;
+	while(cur){ 
+		del=0;
+	  	fdir=opendir(msg->file_name);
+		if(!fdir){
+			printf("\nThe directory path does not exist12 ");
+			exit(-1);
+		}
+	  	lfiles=readdir(fdir);
+	  	while(lfiles){
+	   		if(!strcmp(lfiles->d_name,cur->filename)){
+				//printf("Found [%s] in the dir [%s]\n",cur->filename,lfiles->d_name);
+				del=1;
+			}
+	   
+	   		lfiles=readdir(fdir);
+	  	}
+		if(del==0){
+			//printf("Not Found Must Be deleted(%s)\n",cur->filename);
+	 		watched_files=delete_file(watched_files,cur->filename);
+			*new_msg=full_message_creator(FILE_DELETED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
+									msg->file_name,current_file.sha1sum, fsize);
+			if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+				perror("create thread udpclient");
+			    	exit(EXIT_FAILURE);
+		  	}
+	  	}
+	  cur=cur->next;		  
+	}	
+	pause();
+	printf("\n\n");
+	i++;
+	
+	return params;
+}
 
 int main(int argc, char **argv){
 
@@ -493,14 +805,17 @@ int main(int argc, char **argv){
 	/*added now*/char p[100];
 	char *client_name;
 	char *watched_dir;
+	full_msg *data_for_packet;
 	DIR *dir;
         struct dirent *files;
 	
 	/*edited by jagathan*/
 	pthread_t thread_udpserver;
   	pthread_t thread_udpclient;  
+	pthread_t thread_tcpserver;
   	pthread_attr_t thread_udpserver_attributes;
   	pthread_attr_t thread_udpclient_attributes;
+	pthread_attr_t thread_tcpserver_attributes;
 	/*end -jagathan*/
 	
 	/*added by rafas*/long long int clock;
@@ -550,10 +865,11 @@ int main(int argc, char **argv){
 		client_name, watched_dir, scan_interval, broadcast_port);
 
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
-	full_msg full_test = full_message_creator(NOP, client_name, broadcast_port, 1548784512, 1548784512, watched_dir,"abcdefgghshjjdaaseee", 100);
-	message_interpretation(full_test);
+	//full_msg full_test = full_message_creator(NEW_FILE_MSG, client_name, broadcast_port, 1548784512, 1548784512, watched_dir,"abcdefgghshjjdaaseee", 100);
+	//message_interpretation(full_test);
 	/*AREA 51 TEST AREA!! PLEASE REMOVE "YOU DIDN'T SEE ANYTHING"*/
-
+	
+	
 	dir=opendir(watched_dir);/*opens directory watched_dir and copies files in watched_files list*/
 	/*added now*/strcat(watched_dir,"/");
 	if(!dir){
@@ -563,48 +879,57 @@ int main(int argc, char **argv){
         files=readdir( dir);
         while(files){
                  /*Edit by Rafas*/
-		
-		strcpy(p,watched_dir);
-		
-		
+		if((strcmp(files->d_name,".")==0)||(strcmp(files->d_name,"..")==0)){
+			files=readdir(dir);
+			continue;
+		}
+		strcpy(p,watched_dir);		
 		strcat(p,files->d_name);
-		printf("File:  %s",files->d_name);
+		//printf("File:  %s",files->d_name);
 		clock=get_last_modified(p);
-		printf("Since the Epoch: [%ld seconds]\n",clock);
+		//printf("Since the Epoch: [%ld seconds]\n",clock);
+		
 		fsize=filesize(p);
-		compute_sha1_of_file(files->d_name,current_file.sha1sum);/* added by jagathan */
-		printf("File size: %d bytes\n\n", fsize);
+		compute_sha1_of_file(current_file.sha1sum,files->d_name);/* added by jagathan */
+		//printf("File size: %d bytes\n\n", fsize);
 		
                 watched_files=insert_file(watched_files,files->d_name,fsize,current_file.sha1sum,clock);
                 files=readdir(dir);
-                
-                
-                
+          
 		/*End of Changes*/
-        }
-        while(watched_files){/*prints watched_files list*/
-                printf("\n%s",watched_files->filename);
-                watched_files=watched_files->next;
-        }
-	
+      	}	
 	/* Edited by jagathan */
 	/*create the threads for udp server and client*/
 	/* Initialize the attributes of the threads */
 	pthread_attr_init(&thread_udpserver_attributes);
 	pthread_attr_init(&thread_udpclient_attributes);
+	pthread_attr_init(&thread_tcpserver_attributes);
 	/*Set the detache state to JOINABLE*/
 	pthread_attr_setdetachstate(&thread_udpserver_attributes, PTHREAD_CREATE_JOINABLE);
 	pthread_attr_setdetachstate(&thread_udpclient_attributes, PTHREAD_CREATE_JOINABLE);
-	
-	if( pthread_create(&thread_udpserver, &thread_udpserver_attributes, &udp_server,(void*)&broadcast_port) != 0){
+	pthread_attr_setdetachstate(&thread_tcpserver_attributes, PTHREAD_CREATE_JOINABLE);
+	if(pthread_create(&thread_udpserver, &thread_udpserver_attributes, &udp_server,(void*)&broadcast_port) != 0){
 		perror("create thread udpserver");
 	    	exit(EXIT_FAILURE);
-  	}	
-	if( pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)&broadcast_port) != 0){
-		perror("create thread udpclient");
-	    	exit(EXIT_FAILURE);
   	}
-	
+	/*if(pthread_create(&thread_tcpserver, &thread_tcpserver_attributes, &udp_server,(void*)&broadcast_port) != 0){
+		perror("create thread udpserver");
+	    	exit(EXIT_FAILURE);
+  	}*/	
+	while(1){
+		data_for_packet=(full_msg*)malloc(sizeof(full_msg));
+		data_for_packet->file_name=(char*)malloc(sizeof(char*));
+		strcpy(data_for_packet->file_name,watched_dir);
+		data_for_packet->file_name=watched_dir;
+		data_for_packet->client_name=(char*)malloc(sizeof(char*));
+		strcpy(client_name,client_name);
+		data_for_packet->TCP_listening_port=broadcast_port;
+		if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &scan_for_file_changes_thread,(void*)data_for_packet) != 0){
+			perror("create thread udpclient");
+		    	exit(EXIT_FAILURE);
+  		}
+	  	sleep(scan_interval);
+	}	
 	pause();	
 	/* end -jagathan*/
 	return 0;
