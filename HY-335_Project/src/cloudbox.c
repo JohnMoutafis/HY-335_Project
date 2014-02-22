@@ -431,6 +431,7 @@ void* udp_server(void* param){
 	int sock;
 	/*int accepted;*/
 	int r;
+	pthread_mutex_lock(&print_mutex);
 	full_msg* received=(full_msg*)malloc(sizeof(full_msg));
 	//full_msg* msg=(full_msg*)param;
 	//int port=msg->TCP_listening_port;
@@ -473,6 +474,7 @@ void* udp_server(void* param){
 		else{		
 			buffer[r]=0;
 			sscanf(buffer, "%hd", &received->msg_type);
+			printf("\nMESSAGE %s ",buffer);
 			memset(buffer, 0, 512);
 	        }
 		if((r =read(sock,buffer,511)) == -1){
@@ -548,16 +550,15 @@ void* udp_server(void* param){
 	
 	}
 	pause();
-	
+	pthread_mutex_unlock(&print_mutex);
 	/*free(received);*/
 }
 /*jagathan*/
 /*handles every client that connects*/
 void* udp_receiver_dispatcher_thread(void *params){
-	pthread_mutex_lock(&print_mutex);
+
 	full_msg* msg=(full_msg*)params;	
 	message_interpretation(*msg);
-	pthread_mutex_unlock(&print_mutex);
 	//tcp_client(msg->TCP_listening_port);
 	sleep(2);
 	pthread_exit(NULL);
@@ -639,10 +640,10 @@ void* scan_for_file_changes_thread(void* params){
 	pthread_attr_setdetachstate(&thread_udpclient_attributes, PTHREAD_CREATE_JOINABLE);
 
 	pthread_mutex_lock(&file_list_mutex);
-	pthread_mutex_lock(&print_mutex);
+	//pthread_mutex_lock(&print_mutex);
 	fdir=opendir(msg->file_name);
 	if(!fdir){
-		printf("\nThe directory path does not exist12 %s",msg->file_name);
+		printf("\nThe directory path does not exists %s",msg->file_name);
 		exit(-1);
 	}
 	//printf("\t\t\t\t\t\tStarts Checking of files %d\n",i);
@@ -664,7 +665,7 @@ void* scan_for_file_changes_thread(void* params){
 		compute_sha1_of_file(current_file.sha1sum,ffiles->d_name);/* added by jagathan */
 		//printf("File size: %d bytes\n\n", fsize);
 	        cur=watched_files;
-		while(cur){
+		while(cur){	
 			list_length++;
 			if(!strcmp(ffiles->d_name,cur->filename)){
 				check_dir++;
@@ -673,45 +674,38 @@ void* scan_for_file_changes_thread(void* params){
 			}
 		   	if(!strcmp(ffiles->d_name,cur->filename)){
 		    		if(fsize!=cur->size_in_bytes){
-					//printf("\nMPIKA1");
+					printf("\nMPIKA1 %s %s",ffiles->d_name,cur->filename);
 		      			modify=1;
 		      			flag=4;//modify
-		      			//if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
+		      			if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
 		      			cur->size_in_bytes=fsize;
-					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
-									msg->file_name,current_file.sha1sum, fsize);
-	
-					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
-						perror("create thread udpclient");
-				    		exit(EXIT_FAILURE);
-			  		}
+					
 		    		}
 		    		if(clock!=cur->modifictation_time_from_epoch){
-					//printf("\nMPIKA2");
+					printf("\nMPIKA2");
 					modify=1;
 		       			flag=4;//modify
-		       			//if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
+		       			if(flag==4)printf("\n\n\nModify ena arxeio\n\n\n");
 		      			cur->modifictation_time_from_epoch=clock;
-					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
-									msg->file_name,current_file.sha1sum, fsize);
-	
-					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
-						perror("create thread udpclient");
-				    		exit(EXIT_FAILURE);
-			  		}
+					
 		    		}
 		    		if(strcmp(current_file.sha1sum,cur->sha1sum)!=0){
-					//printf("\nMPIKA3");
+					printf("\nMPIKA3");
 		    	  		strcpy(cur->sha1sum,current_file.sha1sum);
 					flag=4;
+					
+		   		}
+				if(flag==4){
 					*new_msg=full_message_creator(FILE_CHANGED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
 									msg->file_name,current_file.sha1sum, fsize);
-	
+					
 					if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
 						perror("create thread udpclient");
 				    		exit(EXIT_FAILURE);
 			  		}
-		   		}	
+					
+					
+				}	
 		   		 
 		  	}
 		  	cur=cur->next;
@@ -720,15 +714,19 @@ void* scan_for_file_changes_thread(void* params){
 		if(flag==0)
 		{	
 			watched_files=insert_file(watched_files,ffiles->d_name,fsize,current_file.sha1sum,clock);
+			//list_length++;
 			flag=3;//add new file
 		        if(flag==3){
-				//printf("\n\n\nProstethike ena arxeio\n\n\n");
-				*new_msg=full_message_creator(NEW_FILE_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, msg->file_name,current_file.sha1sum, fsize);
+				printf("\n\n\nProstethike ena arxeio\n\n\n");
 				
+				*new_msg=full_message_creator(NEW_FILE_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, msg->file_name,current_file.sha1sum, fsize);
+			
 				if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
 					perror("create thread udpclient");
 				    	exit(EXIT_FAILURE);
 			  	}
+				
+		;
 			}
 		}
 		    
@@ -737,28 +735,35 @@ void* scan_for_file_changes_thread(void* params){
 		ffiles=readdir(fdir);
 	}
 	
-	/*if((!ffiles) && (list_length==0)){
+	if((!ffiles) && (list_length==0)){
 		flag=1;//flag=1 not founded
 		*new_msg=full_message_creator(DIR_EMPTY, msg->client_name,msg->TCP_listening_port, cur_time, 0, msg->file_name,"-", 0);
+
 		if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
 			perror("create thread udpclient");
 		    	exit(EXIT_FAILURE);
 	  	}
-		pause();
-		pthread_exit(NULL);
-		return;
-	}*/
-	if(list_length==check_dir && modify==0){//den eginan allages
-	  	//printf("\n\n\nDen eginan allages %s\n\n\n",msg->client_name);
-		*new_msg=full_message_creator(NO_CHANGES_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, "","", 0);/* OXI SHA1 KAI OXI PROSFATO CLOCK*/
+		
+		
+		return params;
 	}
-	pthread_mutex_unlock(&file_list_mutex);
-	pthread_mutex_unlock(&print_mutex);
+	if(list_length==check_dir && modify==0 && list_length!=0){//den eginan allages
+	  	printf("\n\n\nDen eginan allages %s\n\n\n",msg->client_name);
+		*new_msg=full_message_creator(NO_CHANGES_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, "","", 0);/* OXI SHA1 KAI OXI PROSFATO CLOCK*/
 	
-	if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+		if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
+			perror("create thread udpclient");
+		    	exit(EXIT_FAILURE);
+  		}
+		
+		
+	}
+	
+	
+	/*if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
 		perror("create thread udpclient");
 	    	exit(EXIT_FAILURE);
-  	}
+  	}*/	
 	del=0;
 	cur=watched_files;
 	while(cur){ 
@@ -778,23 +783,29 @@ void* scan_for_file_changes_thread(void* params){
 	   		lfiles=readdir(fdir);
 	  	}
 		if(del==0){
-			//printf("Not Found Must Be deleted(%s)\n",cur->filename);
+			printf("Not Found Must Be deleted(%s)\n",cur->filename);
 	 		watched_files=delete_file(watched_files,cur->filename);
 			*new_msg=full_message_creator(FILE_DELETED_MSG,msg->client_name,msg->TCP_listening_port, cur_time, clock, 
 									msg->file_name,current_file.sha1sum, fsize);
+			
 			if(pthread_create(&thread_udpclient, &thread_udpclient_attributes, &udp_client,(void*)new_msg) != 0){
 				perror("create thread udpclient");
 			    	exit(EXIT_FAILURE);
 		  	}
+			
+		
 	  	}
 	  cur=cur->next;		  
 	}	
+	pthread_mutex_unlock(&file_list_mutex);
+	//pthread_mutex_unlock(&print_mutex);
 	pause();
 	printf("\n\n");
 	i++;
 	
 	return params;
 }
+
 
 int main(int argc, char **argv){
 
