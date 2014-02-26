@@ -108,6 +108,7 @@ extern pthread_mutex_t print_mutex;
  * of the file list of the watched directory
  */
 extern pthread_mutex_t file_list_mutex;
+extern pthread_mutex_t tcp_client_mutex;
 
 /**
  * Computes the SHA1 checksum of a file.
@@ -132,7 +133,7 @@ void compute_sha1_of_file(char *outbuff, char *filename);
  * @param outbuff The buffer in which the SHA1 checksum
  * shall be stored. outbuff should be SHA1_BYTES_LEN bytes
  * long.
- * 
+	 * 
  * @param buffer The buffer contaning the data
  * @param buffer_len The length of the data in bytes
  */
@@ -207,3 +208,7 @@ struct dir_files_status_list* insert_file(struct dir_files_status_list *head,cha
  *  from the struct dir_files_status_list .
  */
 struct dir_files_status_list* delete_file(struct dir_files_status_list *head,char *filename);
+
+void* check_changes(void* params);
+
+	
