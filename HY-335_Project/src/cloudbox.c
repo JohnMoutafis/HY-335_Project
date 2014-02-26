@@ -126,144 +126,391 @@ struct dir_files_status_list* delete_file(struct dir_files_status_list *head,cha
  * Message functions
  * Moutafis
  */
-full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name,char* checksum, int file_lngh)
-{
+
+/**
+ * AUXILIARY
+ */
+void eight_byte_mod(unsigned char mod_array[], int timestamp){
+	mod_array[0] = (timestamp & 0xff00000000000000) >> 56;
+	mod_array[1] = (timestamp & 0x00ff000000000000) >> 48;
+	mod_array[2] = (timestamp & 0x0000ff0000000000) >> 40;
+	mod_array[3] = (timestamp & 0x000000ff00000000) >> 32;
+	mod_array[4] = (timestamp & 0x00000000ff000000) >> 24;
+	mod_array[5] = (timestamp & 0x0000000000ff0000) >> 16;
+	mod_array[6] = (timestamp & 0x000000000000ff00) >>  8;
+	mod_array[7] =  timestamp & 0x00000000000000ff       ;
+}
+
+/**
+ * Message to bytes creator
+ */
+void message_creator(unsigned char* full_message_buffer, msg_type_t msg, char* client_name,int TCP_lp, int curr_time, int file_mts, int file_lngh, char* file_name, char* checksum, int ok){
+	//Default part of the message
+	int i, n, default_buffer_size = 12+ strlen(client_name);
+	unsigned char eight_byte[8];
+    full_message_buffer = (unsigned char*)realloc(full_message_buffer, default_buffer_size*sizeof(unsigned char));
+	//Type
+	full_message_buffer[0] = msg & 0xff00;
+	full_message_buffer[1] = msg & 0x00ff;
+	full_message_buffer[2] = 0x0;
+	//Name between 0x0
+	for(i=0;client_name[i]!='\0';i++){
+		full_message_buffer[3+i] = client_name[i];
+	}
+	full_message_buffer[3+i] = 0x0;
+	i=i+4;
+	//Tcp listening port
+	full_message_buffer[i] = (TCP_lp >> 8) & 0xff;
+	i++;
+	full_message_buffer[i] = TCP_lp & 0xff;
+	i++;
+	// Current timestamp
+	eight_byte_mod(eight_byte, curr_time);
+	for(n=0; n<8; n++){
+		full_message_buffer[i+n] = eight_byte[n];
+	}
+	i+=n;
+	//All the message cases:
+	if (msg == NO_CHANGES_MSG){
+		int buffer_size = default_buffer_size + 22;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//Checksum
+		for(n=0; checksum[n]!= '\0'; n++){
+			full_message_buffer[i+n] = checksum[n];
+		}
+	}
+	else if (msg == NEW_FILE_MSG){
+		int buffer_size = default_buffer_size + strlen(file_name)+10;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//filename between 0x0
+		full_message_buffer[i] = 0x0;
+		i++;
+
+		for(n=0; file_name[n]!='\0'; n++){
+
+			full_message_buffer[i+n] = file_name[n];
+
+		}
+		i+=n;
+		//file length
+		eight_byte_mod(eight_byte, file_lngh);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+	}
+	else if(msg==FILE_CHANGED_MSG){
+		int buffer_size = default_buffer_size + strlen(file_name)+18;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//filename between 0x0
+		full_message_buffer[i] = 0x0;
+		i++;
+
+		for(n=0; file_name[n]!='\0'; n++){
+
+			full_message_buffer[i+n] = file_name[n];
+
+		}
+		i+=n;
+		//file length
+		eight_byte_mod(eight_byte, file_lngh);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+		i+=n;
+		//file modification timestamp
+		eight_byte_mod(eight_byte, file_mts);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+	}
+	else if(msg==FILE_DELETED_MSG){
+		int buffer_size = default_buffer_size + strlen(file_name)+18;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//filename between 0x0
+		full_message_buffer[i] = 0x0;
+		i++;
+
+		for(n=0; file_name[n]!='\0'; n++){
+
+			full_message_buffer[i+n] = file_name[n];
+
+		}
+		i+=n;
+		//file length
+		eight_byte_mod(eight_byte, file_lngh);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+		i+=n;
+		//file modification timestamp
+		eight_byte_mod(eight_byte, file_mts);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+	}
+	else if(msg==FILE_TRANSFER_REQUEST){
+		int buffer_size = default_buffer_size + strlen(file_name)+11;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//filename between 0x0
+		full_message_buffer[i] = 0x0;
+		i++;
+
+		for(n=0; file_name[n]!='\0'; n++){
+
+			full_message_buffer[i+n] = file_name[n];
+
+		}
+		i+=n;
+		//file length
+		eight_byte_mod(eight_byte, file_lngh);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+		i+=n;
+		full_message_buffer[i] = ok & 0xff;
+	}
+	else if(msg==FILE_TRANSFER_OFFER){
+		int buffer_size = default_buffer_size + strlen(file_name)+10;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//filename between 0x0
+		full_message_buffer[i] = 0x0;
+		i++;
+
+		for(n=0; file_name[n]!='\0'; n++){
+
+			full_message_buffer[i+n] = file_name[n];
+
+		}
+		i+=n;
+		//file length
+		eight_byte_mod(eight_byte, file_lngh);
+		for(n=0; n<8; n++){
+
+			full_message_buffer[i+n] = eight_byte[n];
+		}
+		i+=n;
+		full_message_buffer[i] = ok & 0xff;
+	}
+	else if(msg==DIR_EMPTY){
+		int buffer_size = default_buffer_size + 22;
+		full_message_buffer = (unsigned char*)realloc(full_message_buffer, buffer_size*sizeof(unsigned char));
+		//Checksum
+		for(n=0; checksum[n]!= '\0'; n++){
+			full_message_buffer[i+n] = checksum[n];
+		}
+	}
+}
+
+/**
+ * Message reader
+ */
+full_msg read_message(unsigned char incoming[]){
+
 	full_msg ret;
-	//default part of the message
-	ret.msg_type = msg;
-	ret.TCP_listening_port = TCP_lp;
-	ret.current_time_stamp = curr_ts;
-	int size_of_cname = strlen(client_name) + 2, i;
-	char tmp_cname[size_of_cname];
-	tmp_cname[0] = 0x0;
-	for(i=1; i<=strlen(client_name); i++)
-	{
-		tmp_cname[i] = client_name[i-1];
-	}
-	tmp_cname[size_of_cname+1] = 0x0;
-	//ret.client_name=(char*)malloc(sizeof(char*));
-	//strcpy(ret.client_name ,tmp_cname);
-	ret.client_name = tmp_cname;
+	int shift_8 = 56;
+	int i, n=1;
+	char c=incoming[3];
+	//default message reader
+	//msg type
+	ret.msg_type = incoming[1];
 
-	//Non default cases:
-	ret.file_mod_time_stamp = file_mts;
-	ret.file_length = file_lngh;
-	int size_of_fname = strlen(file_name) + 1;
-	char tmp_fname[size_of_fname];
-	tmp_fname[0] = 0x0;
-	for(i=1; i<=size_of_fname; i++)
-	{
-		tmp_fname[i] = file_name[i-1];
+	//client name
+	while (c != 0x0){
+		c = incoming[3+n];
+		n++;
 	}
-	tmp_fname[size_of_fname] = 0x0;
-	ret.file_name = tmp_fname;
-	ret.sha1_checksum = checksum;
-	return ret;
-}
-void print_string(char* str){
-	int cname_size = strlen(str);
-	int i;
-	char cname_tmp[cname_size];
-	for(i=1; i<cname_size-1; i++)
-	{
-		cname_tmp[i-1] = str[i];
-	}
-	printf("\n\nTo string einai %d   %s \n\n",cname_size,cname_tmp);
-}
-void message_interpretation(full_msg incoming)
-{
-	int i;
-	int cname_size = sizeof(incoming.client_name), fname_size = sizeof(incoming.file_name);
-	char cname_tmp[cname_size], fname_tmp[fname_size];
-	for(i=1; i<cname_size-1; i++)
-	{
-		cname_tmp[i-1] = incoming.client_name[i];
-	}
-	for(i=1; i<fname_size-1; i++)
-	{
-		fname_tmp[i-1] = incoming.file_name[i];
-	}
-	printf("\n\t\tUDP Packet received %d\n",incoming.msg_type);
-	//Message Cases
-	if (incoming.msg_type == STATUS_MSG)
-	{
-		printf("\nSTATUS_MSG: 0x1\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time: %ld\n",incoming.current_time_stamp);
-	}
-	else if(incoming.msg_type == NO_CHANGES_MSG)
-	{
-		printf("\nNO_CHANGES_MSG: 0x2\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time: %ld\n",incoming.current_time_stamp);
-		//printf("Sha1: %s\n",incoming.sha1_checksum);
-	}
-	else if(incoming.msg_type == NEW_FILE_MSG)
-	{
-		printf("\nNEW_FILE_MSG: 0x3\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time: %ld\n",incoming.current_time_stamp);
-		printf("File name: %s\n",fname_tmp);
-		printf("File length: %ld\n",incoming.file_length);
-	}
-	else if(incoming.msg_type == FILE_CHANGED_MSG)
-	{
-		printf("\nFILE_CHANGED_MSG: 0x4\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time: %ld\n",incoming.current_time_stamp);
-		printf("File name: %s\n",fname_tmp);
-		printf("File mod time: %ld\n",incoming.file_mod_time_stamp);
-	}
-	else if(incoming.msg_type == FILE_DELETED_MSG)
-	{
-		printf("\nFILE_DELETED_MSG: 0x5\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time: %ld\n",incoming.current_time_stamp);
-		printf("File name: %s\n",fname_tmp);
-		printf("File mod time: %ld\n",incoming.file_mod_time_stamp);
-		printf("File length: %ld\n",incoming.file_length);
-	}
-	else if(incoming.msg_type == FILE_TRANSFER_REQUEST)
-	{
-		printf("FILE_TRANSFER_REQUEST\n0x6");
-		printf(" %s",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s\n",fname_tmp);
-	}
-	else if(incoming.msg_type == FILE_TRANSFER_OFFER)
-	{
-		printf("FILE_TRANSFER_OFFER\n0x7");
-		printf(" %s",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf(" %d",incoming.TCP_listening_port);
-		printf(" %ld ",incoming.current_time_stamp);
-		printf(" %s",fname_tmp);
-		printf(" %ld\n",incoming.file_length);
-	}
-	else if(incoming.msg_type == DIR_EMPTY)
-	{
-		printf("DIR_EMPTY: 0x8\n");
-		printf("Client name: %s\n",cname_tmp);
-		printf("Client ip %s \n",client_ip);
-		printf("Port: %d\n",incoming.TCP_listening_port);
-		printf("Client time %ld:",incoming.current_time_stamp);
-	}
-	else if(incoming.msg_type==NOP)
-	{
-		printf("DEBUG :0xFFFF\n");
 
+	ret.client_name = (char*)malloc(n);
+
+	for(i=0; i<n; i++){
+		ret.client_name[i] = incoming[3+i];
+	}
+	i =i+3;
+
+	//TCP listening port
+	ret.TCP_listening_port = incoming[i] << 8;
+	i++;
+	ret.TCP_listening_port = ret.TCP_listening_port + incoming[i];
+	i++;
+
+	//Current timestamp
+	for (n=0; n<8; n++){
+		ret.current_time_stamp += (incoming[i+n] << shift_8);
+		shift_8-=8;
+	}
+	i+=n;
+
+	//Non default cases
+	if(incoming[1] == NO_CHANGES_MSG){
+		//checksum
+		for (n=0; n<20; n++){
+			ret.sha1_checksum[n] = incoming[i+n];
+		}
+		return ret;
+	}
+	else if(incoming[1] == NEW_FILE_MSG){
+		i++;
+		//file name
+		c=incoming[i];
+		int j=1;
+		int x=0;
+		while (incoming[i+x] != '\0'){
+			c = incoming[i+n];
+			j++;
+			x++;
+		}
+
+		ret.file_name = (char*)malloc(j);
+		for(n=0; n<x; n++){
+			ret.file_name[n] = incoming[i+n];
+
+		}
+		i+=n;
+
+		//file length
+		for (n=0; n<8; n++){
+			ret.file_length += (incoming[i+n] << shift_8);
+			shift_8-=8;
+		}
+		i+=n;
+		return ret;
+	}
+	else if(incoming[1]==FILE_DELETED_MSG){
+		i++;
+		//file name
+		c=incoming[i];
+		int j=1;
+		int x=0;
+		while (incoming[i+x] != '\0'){
+			c = incoming[i+n];
+			j++;
+			x++;
+		}
+
+		ret.file_name = (char*)malloc(j);
+		for(n=0; n<x; n++){
+			ret.file_name[n] = incoming[i+n];
+
+		}
+		i+=n;
+
+		//file length
+		for (n=0; n<8; n++){
+			ret.file_length += (incoming[i+n] << shift_8);
+			shift_8-=8;
+		}
+		i+=n;
+		shift_8 = 56;
+		//file modification stamp
+		for (n=0; n<8; n++){
+			ret.file_mod_time_stamp += (incoming[i] << shift_8);
+			shift_8-=8;
+		}
+		return ret;
+	}
+	else if(incoming[1]==FILE_CHANGED_MSG){
+		i++;
+		//file name
+		c=incoming[i];
+		int j=1;
+		int x=0;
+		while (incoming[i+x] != '\0'){
+			c = incoming[i+n];
+			j++;
+			x++;
+		}
+
+		ret.file_name = (char*)malloc(j);
+		for(n=0; n<x; n++){
+			ret.file_name[n] = incoming[i+n];
+		}
+		i+=n;
+
+		//file length
+		for (n=0; n<8; n++){
+			ret.file_length += (incoming[i+n] << shift_8);
+			shift_8-=8;
+		}
+		i+=n;
+		shift_8 = 56;
+		//file modification stamp
+		for (n=0; n<8; n++){
+			ret.file_mod_time_stamp += (incoming[i] << shift_8);
+			shift_8-=8;
+		}
+		return ret;
+	}
+	else if(incoming[1]==FILE_TRANSFER_REQUEST){
+		i++;
+		//file name
+		c=incoming[i];
+		int j=1;
+		int x=0;
+		while (incoming[i+x] != '\0'){
+			c = incoming[i+n];
+			j++;
+			x++;
+		}
+
+		ret.file_name = (char*)malloc(j);
+		for(n=0; n<x; n++){
+			ret.file_name[n] = incoming[i+n];
+
+		}
+		i+=n;
+
+		//file length
+		for (n=0; n<8; n++){
+			ret.file_length += (incoming[i+n] << shift_8);
+			shift_8-=8;
+		}
+		i+=n;
+		ret.ok = incoming[i];
+		return ret;
+	}
+	else if(incoming[1]==FILE_TRANSFER_OFFER){
+		i++;
+		//file name
+		c=incoming[i];
+		int j=1;
+		int x=0;
+		while (incoming[i+x] != '\0'){
+			c = incoming[i+n];
+			j++;
+			x++;
+		}
+
+		ret.file_name = (char*)malloc(j);
+		for(n=0; n<x; n++){
+			ret.file_name[n] = incoming[i+n];
+
+		}
+		i+=n;
+
+		//file length
+		for (n=0; n<8; n++){
+			ret.file_length += (incoming[i+n] << shift_8);
+			shift_8-=8;
+		}
+		i+=n;
+		ret.ok = incoming[i];
+		return ret;
+	}
+	else if(incoming[1]==DIR_EMPTY){
+
+		for (n=0; n<20; n++){
+			ret.sha1_checksum[n] = incoming[i+n];
+		}
+		return ret;
+	}
+	else{
+		return ret;
 	}
 }
 /*END OF MESSAGE FUNCTIONS*/

@@ -180,18 +180,24 @@ void *udp_receiver_dispatcher_thread(void *params);
  */
 typedef struct full_msg{
 	//default message
-	short int msg_type;
+	int msg_type;
 	char *client_name;
-	short int TCP_listening_port;
-	long int current_time_stamp;
+	int TCP_listening_port;
+	int current_time_stamp;
 	//Extra parts
-	long int file_mod_time_stamp;
+	int file_mod_time_stamp;
+	int file_length;
 	char* file_name;
-	char* sha1_checksum;
-	long int file_length;
+	char sha1_checksum[20];
+	int ok;
 }full_msg;
 
-full_msg full_message_creator(msg_type_t msg, char* client_name, int TCP_lp, int curr_ts, int file_mts, char* file_name,char* checksum, int file_lngh);
+void message_creator(unsigned char* full_message_buffer, msg_type_t msg, char* client_name,int TCP_lp, int curr_time, int file_mts, int file_lngh, char* file_name, char* checksum, int ok);
+
+full_msg read_message(unsigned char incoming[]);
+
+//AUXILIARY
+void eight_byte_mod(unsigned char mod_array[], int timestamp);
 
 /*END OF CUSTOM FUNCTIONS & STRUCTS*/
 
